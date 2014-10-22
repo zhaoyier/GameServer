@@ -1,0 +1,10 @@
+{
+  "chat.chatHandler.send": {
+    "required string from": 1,
+    "required string toName": 2,
+    "required string target": 3,
+    "required string content": 4
+  }
+}
+
+

@@ -1,0 +1,29 @@
+[2014-10-16 14:46:11.362] [ERROR] dao - zhaoyier:	null[object Object]
+[2014-10-16 15:04:12.643] [ERROR] dao - zhaoyier:	null[object Object]
+[2014-10-16 17:52:10.235] [ERROR] dao - authAccount select:	 { [Error: ER_NO_SUCH_TABLE: Table 'Pomelo.Accountt' doesn't exist]
+  code: 'ER_NO_SUCH_TABLE',
+  errno: 1146,
+  sqlState: '42S02',
+  index: 0 }
+Error: ER_NO_SUCH_TABLE: Table 'Pomelo.Accountt' doesn't exist
+    at Query.Sequence._packetToError (/home/zhaojianwei/pomelo/GameServer/game-server/node_modules/mysql/lib/protocol/sequences/Sequence.js:48:14)
+    at Query.ErrorPacket (/home/zhaojianwei/pomelo/GameServer/game-server/node_modules/mysql/lib/protocol/sequences/Query.js:82:18)
+    at Protocol._parsePacket (/home/zhaojianwei/pomelo/GameServer/game-server/node_modules/mysql/lib/protocol/Protocol.js:271:23)
+    at Parser.write (/home/zhaojianwei/pomelo/GameServer/game-server/node_modules/mysql/lib/protocol/Parser.js:77:12)
+    at Protocol.write (/home/zhaojianwei/pomelo/GameServer/game-server/node_modules/mysql/lib/protocol/Protocol.js:39:16)
+    at Socket.<anonymous> (/home/zhaojianwei/pomelo/GameServer/game-server/node_modules/mysql/lib/Connection.js:82:28)
+    at Socket.EventEmitter.emit (events.js:95:17)
+    at Socket.<anonymous> (_stream_readable.js:746:14)
+    at Socket.EventEmitter.emit (events.js:92:17)
+    at emitReadable_ (_stream_readable.js:408:10)
+    --------------------
+    at Protocol._enqueue (/home/zhaojianwei/pomelo/GameServer/game-server/node_modules/mysql/lib/protocol/Protocol.js:135:48)
+    at Connection.query (/home/zhaojianwei/pomelo/GameServer/game-server/node_modules/mysql/lib/Connection.js:185:25)
+    at /home/zhaojianwei/pomelo/GameServer/game-server/app/dao/mysql/mysql.js:29:16
+    at /home/zhaojianwei/pomelo/GameServer/game-server/node_modules/generic-pool/lib/generic-pool.js:281:11
+    at Object._poolModule.Pool.create (/home/zhaojianwei/pomelo/GameServer/game-server/app/dao/mysql/dao-pool.js:18:13)
+    at createResource (/home/zhaojianwei/pomelo/GameServer/game-server/node_modules/generic-pool/lib/generic-pool.js:261:13)
+    at dispense (/home/zhaojianwei/pomelo/GameServer/game-server/node_modules/generic-pool/lib/generic-pool.js:253:9)
+    at Object.me.acquire (/home/zhaojianwei/pomelo/GameServer/game-server/node_modules/generic-pool/lib/generic-pool.js:319:5)
+    at Object.NND.query (/home/zhaojianwei/pomelo/GameServer/game-server/app/dao/mysql/mysql.js:24:11)
+    at Object.userDao.authAccount (/home/zhaojianwei/pomelo/GameServer/game-server/app/dao/userDao.js:19:29)
