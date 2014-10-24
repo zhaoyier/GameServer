@@ -33,6 +33,7 @@ app.configure('production|development', function(){
     	blacklistFun: blackList.blackListFun
 	});
 
+	app.route('game', routeUtil.gameRoute);
 	app.route('connector', routeUtil.connectorRoute);
 
 	app.loadConfig('mysql', app.getBase() + '/../shared/config/mysql.json');
@@ -52,7 +53,7 @@ app.configure('production|development', 'connector', function(){
 		connector : pomelo.connectors.hybridconnector,
 		heartbeat : 30, 
 		useDict : true,
-		useProtobuf : true,
+		//useProtobuf : true,
 		blacklistFun: blackList.blackListFun,
 		handshake : function(msg, cb){
 			cb(null, {});
@@ -74,6 +75,10 @@ app.configure('production|development', 'chat', function() {
 	app.filter(abuseFilter());
 	app.set('chatService', new ChatService(app));
 });
+
+/*app.configure('production|development', 'game', function() {
+
+})*/
 
 // Configure database
 app.configure('production|development', 'auth|connector|master', function() {

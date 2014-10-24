@@ -4,7 +4,10 @@
     "required string toName": 2,
     "required string target": 3,
     "required string content": 4
-  }
+  },
+	"game.gameHandler.query":{
+		"required string from":1
+	}
 }
 
 
