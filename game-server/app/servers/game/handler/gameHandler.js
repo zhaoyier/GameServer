@@ -7,12 +7,19 @@ var GameHandler = function(app, gameService) {
     this.gameService = gameService;
 };
 
-GameHandler.prototype.sendi = function(msg, session, next) {
-	console.log("**********:\t", 'i am here');
-	next(null, {msg: 'hello'})
-},
+var handler = GameHandler.prototype;
 
 GameHandler.prototype.query = function(msg, session, next){
 	console.log("**********:\t", 'i am here');
 	next(null, {msg: 'hello'});
 }
+
+handler.enter = function(msg, session, next){
+	next(null, {msg: 'hello'});
+}
+
+handler.quit = function(msg, session, next){
+	next(null, {msg: 'hello'});
+}
+
+

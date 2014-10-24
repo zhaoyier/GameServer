@@ -39,7 +39,7 @@ handler.pushMessageToPlayer = function(){
 	
 }
 
-handler.pushMessageToRoom = function(func, roomId, ){
+handler.pushMessageToRoom = function(func, roomId){
 	
 }
 

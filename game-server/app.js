@@ -4,7 +4,8 @@ var dispatcher = require('./app/util/dispatcher');
 var blackList = require('./app/util/blackList');
 var routeUtil = require('./app/util/routeUtil.js');
 var abuseFilter = require('./app/servers/chat/filter/abuseFilter');
-var ChatService = require('./app/services/chatService');
+var chatService = require('./app/services/chatService');
+var gameService = require('./app/services/gameService');
 
 /**
  * Init app for client.
@@ -73,12 +74,12 @@ app.configure('production|development', 'gate', function(){
 
 app.configure('production|development', 'chat', function() {
 	app.filter(abuseFilter());
-	app.set('chatService', new ChatService(app));
+	app.set('chatService', new chatService(app));
 });
 
-/*app.configure('production|development', 'game', function() {
-
-})*/
+app.configure('production|development', 'game', function() {
+	app.set('gameService', new gameService(app));
+})
 
 // Configure database
 app.configure('production|development', 'auth|connector|master', function() {
