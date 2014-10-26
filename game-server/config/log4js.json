@@ -112,15 +112,15 @@
 			"type":"basic"
 		},
 		"backups":5,
-		"category":"xxgame.log"
+		"category":"gameservice.log"
 	}
   ],
 
   "levels": {
     "rpc-log" : "ERROR",
     "forward-log": "ERROR",
-	"dao": "ERROR",
-	"xxgame":"ERROR"
+    "dao": "ERROR",
+    "gameservice":"ERROR"
   },
 
   "replaceConsole": true,

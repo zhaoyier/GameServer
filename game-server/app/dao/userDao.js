@@ -13,7 +13,7 @@ var userDao = module.exports;
 * @param {function} cb
 */
 userDao.authAccount = function(username, password, cb){
-	var sql = 'select * from Account where username = ? and password = ?';
+	var sql = 'select * from Users where username = ? and password = ?';
 	var args = [username, password];
 
 	pomelo.app.get('dbclient').query(sql,args,function(error, res) {
@@ -22,16 +22,16 @@ userDao.authAccount = function(username, password, cb){
 			utils.invokeCallback(cb, error, null);
 		} else {
 			if (!!res && res.length === 1) {
-				utils.invokeCallback(cb, null, {wuid: res[0].wuid, username: res[0].username});
+				utils.invokeCallback(cb, null, {uid: res[0].uid, username: res[0].username});
 			} else {
-				utils.invokeCallback(cb, null, {wuid: 0, username: username});
+				utils.invokeCallback(cb, null, {uid: 0, username: username});
 			}
 		}
 	});
 },
 
 userDao.createAccount = function(username, password, cb){
-	var sql = 'select * from Account where username = ?';
+	var sql = 'select * from login where username = ?';
 	var args = [username];
 
 	pomelo.app.get('dbclient').query(sql, args, function(error, res){
@@ -42,7 +42,7 @@ userDao.createAccount = function(username, password, cb){
 			if (!!res && res.length >= 1) {
 				utils.invokeCallback(cb, null, {});
 			} else {
-				sql = 'insert into Account(username, password, login_time) values(?,?,?)';
+				sql = 'insert into login(username, password, login_time) values(?,?,?)';
 				args = [username, password, 'now()'];
 				pomelo.app.get('dbclient').query(sql, args, function(error, res){
 					if (error !== null) {
@@ -56,3 +56,8 @@ userDao.createAccount = function(username, password, cb){
 		}
 	})
 }
+
+userDao.recharge = function(uid, transId, type, amount, cb){
+	
+}
+
