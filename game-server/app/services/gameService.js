@@ -84,7 +84,7 @@ handler.pushMessageToPlayer = function(){
 	
 }
 
-handler.pushMessageToRoom = function(func, roomId){
+handler.pushMessageToRoom = function(fun, roomId){
 	
 }
 
@@ -102,9 +102,9 @@ var addRecord = function(service, uid, roomId, sid){
 	roomMap[roomId] = players;
 }
 
-var log = function(fucname, msg){
+var log = function(fun, msg){
 	var timestamp = new Date();
-	logger.error(timestamp+':'+fucname+':'+msg);
+	logger.error(timestamp+':'+fun+':'+msg);
 }
 
 /**

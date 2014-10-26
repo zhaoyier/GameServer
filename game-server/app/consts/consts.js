@@ -7,6 +7,16 @@ module.exports = {
 	},
 	Event:{
 		chat:'onChat'
+	},
+	Currency:{
+		DIAMOND: 1,
+		GOLD: 2
+	},
+	Affcode: {
+		RECHARGE:1,
+		GIVE:2,
+		AUCTION:3,
+		EXCHANGE:4
 	}
 
 }

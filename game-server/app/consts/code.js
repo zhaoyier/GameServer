@@ -13,6 +13,9 @@ module.exports = {
     },
 	Game: {
 		FA_UNKNOWN_CONNECTOR: 1201
-	}
+	},
+    Account: {
+        INSUFFICIENT_BALANCE: 1301
+    }
 	
 }
