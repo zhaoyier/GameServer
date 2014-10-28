@@ -16,6 +16,11 @@ module.exports = {
 	},
     Account: {
         INSUFFICIENT_BALANCE: 1301
+    },
+    Room: {
+        DATA_ERR:1401,
+        ROOM_FULL: 1402,
+        ALREADY_IN_ROOM: 1403
     }
 	
 }

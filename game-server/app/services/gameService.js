@@ -1,5 +1,6 @@
 var Code = require('../../../shared/code');
 var Team = require('../domain/entity/room');
+var Error = require('../consts/code');
 var logger = require('pomelo-logger').getLogger('gameservice', __filename);
 
 var GameService = function(app) {
@@ -55,27 +56,20 @@ handler.kick = function(uid, roomId){
 	return Code.Ok;
 }
 
-handler.selectRoom = function(uid){
-	var isSelect = false;
-	for (var roomId in roomObjMap){
-		if (roomObjMap[roomId].isRoomHasPosition()){
-			isSelect = true;
-			return roomObjMap[roomId];
-		}
-	}
-
-	if (!isSelect){
-		var roomObj = createRoom(uid);
-		return roomObj;
-	}
+handler.joinRoom = function(uid){
+	
 }
 
 
 handler.createRoom = function(uid){
 	var roomObj = new Room(++roomId);
 	var res = roomObj.addPlayer(uid);
-	this.roomObjMap[roomObj.roomId] = roomObj;
-
+	if (Error.OK){
+		this.roomObjMap[roomObj.roomId] = roomObj;	
+	} else {
+		return null;
+	}
+	
 }
 
 
