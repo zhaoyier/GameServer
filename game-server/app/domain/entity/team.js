@@ -3,16 +3,16 @@ var Error = require('../../consts/code');
 
 var MAX_MEMBER_NUM = 5
 
-module.exports = Room;
+module.exports = Team;
 
-function Room(teamId){
+function Team(teamId){
 	this.teamId = 0;
 	this.playerNum = 0;
 	this.playerArray = [];
 
 }
 
-var handler = Room.prototype;
+var handler = Team.prototype;
 
 handler.createChannel = function(){
 	if(this.channel) {
@@ -27,24 +27,36 @@ handler.createChannel = function(){
 	return null;
 }
 
+handler.createChannel = function() {
+  if(this.channel) {
+    return this.channel;
+  }
+  var channelName = channelUtil.getTeamChannelName(this.teamId);
+  this.channel = pomelo.app.get('channelService').getChannel(channelName, true);
+  if(this.channel) {
+    return this.channel;
+  }
+  return null;
+};
+
 
 handler.addPlayer = function(data){
-	if (this.isRoomHasPosition()){
+	if (this.isTeamHasPosition()){
 		var player = {};
 		this.playerArray.push(player);
 		return this.teamId;
 	} 
 
 	if (!data || typeof data !== 'object'){
-		return Error.Room.DATA_ERR;
+		return Error.Team.DATA_ERR;
 	}
 
-	if (!this.isRoomHasPosition()){
-		return Error.Room.ROOM_FULL;
+	if (!this.isTeamHasPosition()){
+		return Error.Team.TEAM_FULL;
 	}
 
-	if (this.isPlayerInRoom(data.uid)){
-		return Error.Room.ALREADY_IN_ROOM;
+	if (this.isPlayerInTeam(data.uid)){
+		return Error.Team.ALREADY_IN_TEAM;
 	}
 
 	var player = {uid: data.uid, vip: data.vip, hand: data.hand};
@@ -54,11 +66,11 @@ handler.addPlayer = function(data){
 }
 
 // is there a empty position in the team
-handler.isRoomHasPosition = function() {
+handler.isTeamHasPosition = function() {
   return this.getPlayerNum() < MAX_MEMBER_NUM;
 };
 
-handler.isPlayerInRoom = function(uid){
+handler.isPlayerInTeam = function(uid){
 	return true;
 }
 

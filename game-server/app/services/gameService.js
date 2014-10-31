@@ -1,20 +1,20 @@
 var Code = require('../../../shared/code');
-var Team = require('../domain/entity/room');
+var Team = require('../domain/entity/team');
 var Error = require('../consts/code');
 var logger = require('pomelo-logger').getLogger('gameservice', __filename);
 
 var GameService = function(app) {
 	this.app = app;
 	this.uidMap = {};
-	this.roomMap = {};
-	this.roomObjMap = {};
+	this.teamMap = {};
+	this.teamObjMap = {};
 }
 
 module.exports = GameService;
-var roomId = 0;
+var teamId = 0;
 var handler = GameService.prototype;
 
-handler.add = function(uid, roomId){
+handler.add = function(uid, teamId){
 	var sid = getSidByUid(uid, this.app);
 	if (!sid){
 		return Code.FA_UNKNOWN_CONNECTOR;
@@ -24,17 +24,17 @@ handler.add = function(uid, roomId){
 		return Code.OK;
 	}
 
-	addRecord(this, uid, roomId);
+	addRecord(this, uid, teamId);
 	return Code.OK;
 }
 
 handler.leave = function(uid){
 	var record = this.uidMap[uid];
-	if (record && !!this.roomMap[record.roomId]){
+	if (record && !!this.teamMap[record.teamId]){
 		delete this.uidMap[uid];
-		for (var i=0; i<this.roomMap[record.roomId].length; ++i){
-			if (this.roomMap[record.roomId][i]['uid'] === uid){
-				this.roomMap[record.roomId].splice(i, 1);
+		for (var i=0; i<this.teamMap[record.teamId].length; ++i){
+			if (this.teamMap[record.teamId][i]['uid'] === uid){
+				this.teamMap[record.teamId].splice(i, 1);
 			}
 		}
 	} else {
@@ -42,12 +42,12 @@ handler.leave = function(uid){
 	}
 }
 
-handler.kick = function(uid, roomId){
+handler.kick = function(uid, teamId){
 	delete this.uidMap[uid];
-	if (!!this.roomMap[roomId]){
-		for (var i=0; i<this.roomMap[roomId].length; ++i){
-			if (this.roomMap[roomId][i]['uid'] === uid){
-				this.roomMap[roomId].splice(i, 1);
+	if (!!this.teamMap[teamId]){
+		for (var i=0; i<this.teamMap[teamId].length; ++i){
+			if (this.teamMap[teamId][i]['uid'] === uid){
+				this.teamMap[teamId].splice(i, 1);
 			}
 		}
 	} else {
@@ -56,16 +56,16 @@ handler.kick = function(uid, roomId){
 	return Code.Ok;
 }
 
-handler.joinRoom = function(uid){
+handler.joinTeam = function(uid){
 	
 }
 
 
-handler.createRoom = function(uid){
-	var roomObj = new Room(++roomId);
-	var res = roomObj.addPlayer(uid);
+handler.createTeam = function(uid){
+	var teamObj = new Team(++teamId);
+	var res = teamObj.addPlayer(uid);
 	if (Error.OK){
-		this.roomObjMap[roomObj.roomId] = roomObj;	
+		this.teamObjMap[teamObj.teamId] = teamObj;	
 	} else {
 		return null;
 	}
@@ -78,22 +78,22 @@ handler.pushMessageToPlayer = function(){
 	
 }
 
-handler.pushMessageToRoom = function(fun, roomId){
+handler.pushMessageToTeam = function(fun, teamId){
 	
 }
 
 
-var checkDuplicate = function(service, uid, roomId) {
+var checkDuplicate = function(service, uid, teamId) {
 	return !!service.uidMap[uid];
 };
 
-var addRecord = function(service, uid, roomId, sid){
-	var record = {uid: uid, roomId: roomId, sid: sid};
+var addRecord = function(service, uid, teamId, sid){
+	var record = {uid: uid, teamId: teamId, sid: sid};
 	service.uidMap[uid] = record;
 
-	var players = roomMap[roomId] ? roomMap[roomId] : [];
+	var players = teamMap[teamId] ? teamMap[teamId] : [];
 	players.push({uid: uid, sid: sid});
-	roomMap[roomId] = players;
+	teamMap[teamId] = players;
 }
 
 var log = function(fun, msg){
