@@ -17,6 +17,10 @@ module.exports = {
 		GIVE:2,
 		AUCTION:3,
 		EXCHANGE:4
+	},
+	Card: {
+		BACK: 0,
+		FRONT: 1,
 	}
 
 }

@@ -56,9 +56,29 @@ handler.kick = function(uid, teamId){
 	return Code.Ok;
 }
 
+/**
+* 
+*
+*/
 handler.joinTeam = function(uid){
-	
+	var _teamObj = null;
+	for (var _id in this.teamObjMap){
+		if (this.teamObjMap[_id].isTeamHasPosition()){
+			_teamObj = this.teamObjMap[_id];
+		}
+	}
+
+	if (_teamObj != null) {
+		var teammates = _teamObj.addPlayer();
+		return {status: 0, };
+	} else {
+		_teamObj = this.createTeam(uid);
+		if (_teamObj !== null){
+			return {status: 1,};
+		}
+	}
 }
+
 
 
 handler.createTeam = function(uid){
@@ -71,7 +91,6 @@ handler.createTeam = function(uid){
 	}
 	
 }
-
 
 
 handler.pushMessageToPlayer = function(){

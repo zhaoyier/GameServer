@@ -1,4 +1,8 @@
+var logic = require('../logic/xxLogic');
+var poker = require('../config/poker');
 var channelUtil = require('../../util/channelUtil');
+
+var Consts = require('../../consts/consts');
 var Error = require('../../consts/code');
 
 var MAX_MEMBER_NUM = 5
@@ -9,7 +13,8 @@ function Team(teamId){
 	this.teamId = 0;
 	this.playerNum = 0;
 	this.playerArray = [];
-
+	this.teamStatus = 0;		//是否锁定
+	this.poker = poker.getXXPoker();
 }
 
 var handler = Team.prototype;
@@ -40,14 +45,14 @@ handler.createChannel = function() {
 };
 
 
-handler.addPlayer = function(data){
+handler.addPlayer = function(param){
 	if (this.isTeamHasPosition()){
 		var player = {};
 		this.playerArray.push(player);
 		return this.teamId;
 	} 
 
-	if (!data || typeof data !== 'object'){
+	if (!param || typeof param !== 'object'){
 		return Error.Team.DATA_ERR;
 	}
 
@@ -55,13 +60,20 @@ handler.addPlayer = function(data){
 		return Error.Team.TEAM_FULL;
 	}
 
-	if (this.isPlayerInTeam(data.uid)){
+	if (this.isPlayerInTeam(param.uid)){
 		return Error.Team.ALREADY_IN_TEAM;
 	}
 
-	var player = {uid: data.uid, vip: data.vip, hand: data.hand};
-	this.playerArray.push(player);
-	return Error.OK;
+	var hand = logic.createHandCard(this.poker);
+	if (!!hand && typeof(hand) === 'object'){
+		var player = {uid: param.uid, hand: hand.cards, patterns: hand.pattern, status: Code.Card.BACK};
+	} else {
+		return null;
+	}
+	
+	//var player = {uid: data.uid, vip: data.vip, hand: data.hand};
+	//this.playerArray.push(player);
+	//return Error.OK;
 
 }
 
