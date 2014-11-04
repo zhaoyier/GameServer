@@ -62,7 +62,7 @@ handler.kick = function(uid, teamId){
 * 
 *
 */
-handler.joinTeam = function(uid){
+handler.joinTeam = function(uid, callback){
 	var _teamObj = null;
 	for (var _id in this.teamObjMap){
 		if (this.teamObjMap[_id].isTeamHasPosition()){
@@ -73,13 +73,17 @@ handler.joinTeam = function(uid){
 	/**/
 	if (_teamObj != null) {
 		var _teammates = _teamObj.addPlayer({uid: uid});
-		return {teamId: _teamObj.teamId, teammate: _teammates};
+		callback(null, {teamId: _teamObj.teamId, teammate: _teammates});
+		return ;
 	} else {
 		_teamObj = this.createTeam(uid);
 		if (_teamObj !== null){
-			
+			callback(null, {teamId: _teamObj.teamId});
+			return ;
 		}
 	}
+
+	return callback(201);
 }
 
 
