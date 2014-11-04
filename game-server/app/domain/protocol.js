@@ -21,7 +21,16 @@ PlayerBasic: {
 	var gold = 0;
 }
 
-JoinTeam: {
-	var status = 0;		//0:加入,1:新建
+JoinTeamReq: {
+	var uid = 0;
+}
 
+JoinTeamRes: {
+	var teamID = 0;
+	teammate:{
+		uid,
+		username,
+		vip,
+		status
+	}
 }

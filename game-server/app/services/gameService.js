@@ -1,3 +1,5 @@
+var underscore = require('underscore');
+
 var Code = require('../../../shared/code');
 var Team = require('../domain/entity/team');
 var Error = require('../consts/code');
@@ -68,13 +70,14 @@ handler.joinTeam = function(uid){
 		}
 	}
 
+	/**/
 	if (_teamObj != null) {
-		var teammates = _teamObj.addPlayer();
-		return {status: 0, };
+		var _teammates = _teamObj.addPlayer({uid: uid});
+		return {teamId: _teamObj.teamId, teammate: _teammates};
 	} else {
 		_teamObj = this.createTeam(uid);
 		if (_teamObj !== null){
-			return {status: 1,};
+			
 		}
 	}
 }

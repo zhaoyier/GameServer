@@ -3,7 +3,7 @@ var poker = require('../config/poker');
 var channelUtil = require('../../util/channelUtil');
 
 var Consts = require('../../consts/consts');
-var Error = require('../../consts/code');
+var Code = require('../../consts/code');
 
 var MAX_MEMBER_NUM = 5
 
@@ -46,35 +46,37 @@ handler.createChannel = function() {
 
 
 handler.addPlayer = function(param){
-	if (this.isTeamHasPosition()){
-		var player = {};
-		this.playerArray.push(player);
-		return this.teamId;
-	} 
-
 	if (!param || typeof param !== 'object'){
-		return Error.Team.DATA_ERR;
+		return Code.Team.DATA_ERR;
 	}
 
 	if (!this.isTeamHasPosition()){
-		return Error.Team.TEAM_FULL;
+		return Code.Team.TEAM_FULL;
 	}
 
 	if (this.isPlayerInTeam(param.uid)){
-		return Error.Team.ALREADY_IN_TEAM;
+		return Code.Team.ALREADY_IN_TEAM;
 	}
 
 	var hand = logic.createHandCard(this.poker);
 	if (!!hand && typeof(hand) === 'object'){
 		var player = {uid: param.uid, hand: hand.cards, patterns: hand.pattern, status: Code.Card.BACK};
+
+		this.playerNum += 1;
+		this.playerArray.push(player);
+
+		return getAllTeammatesBasic(this.playerArray);
 	} else {
 		return null;
 	}
-	
-	//var player = {uid: data.uid, vip: data.vip, hand: data.hand};
-	//this.playerArray.push(player);
-	//return Error.OK;
+}
 
+handler.getTeammateHand = function(param){
+	if (!param || typeof(param) !== 'object'){
+		return Code.Team.DATA_ERR;
+	}
+
+	return getTeammateHand(param.uid, this.playerArray);
 }
 
 // is there a empty position in the team
@@ -84,5 +86,34 @@ handler.isTeamHasPosition = function() {
 
 handler.isPlayerInTeam = function(uid){
 	return true;
+}
+
+function getAllTeammatesBasic(teammates){
+	var _teammatersIDS = [];
+	for (var i=0; i<teammates.length; ++i){
+		_teammatersIDS.push({uid: teammates[i].uid, status: teammates[i].status});
+	}
+
+	return _teammatersIDS;
+}
+
+function getTeammateHand(uid, teammates){
+	for (var i=0; i<teammates.length; ++i){
+		if (teammates[i].uid === uid){
+			return teammates[i].hand;
+		}
+	}
+
+	return null;
+}
+
+function getTeammateStatus(uid, teammates){
+	for (var i=0; i<teammates.length; ++i){
+		if (teammates[i].uid === uid){
+			return teammates[i].status;
+		}
+	}
+
+	return null;
 }
 
