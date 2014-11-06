@@ -17,7 +17,7 @@ var teamId = 0;
 var handler = GameService.prototype;
 
 handler.add = function(uid, teamId){
-	var sid = getSidByUid(uid, this.app);
+	var sid = getSidByUserId(uid, this.app);
 	if (!sid){
 		return Code.FA_UNKNOWN_CONNECTOR;
 	}
@@ -108,6 +108,10 @@ handler.pushMessageToTeam = function(fun, teamId){
 	
 }
 
+handler.queryUserServerId = function(userId){
+	return getSidByUserId(userId, this.app);
+}
+
 
 var checkDuplicate = function(service, uid, teamId) {
 	return !!service.uidMap[uid];
@@ -130,8 +134,8 @@ var log = function(fun, msg){
 /**
 * Get the connector server id assosiated with the uid
 **/
-var getSidByUid = function(uid, app) {
-  var connector = dispatcher.dispatch(uid, app.getServersByType('connector'));
+var getSidByUserId = function(userId, app) {
+  var connector = dispatcher.dispatch(userId, app.getServersByType('connector'));
   if(connector) {
     return connector.id;
   }

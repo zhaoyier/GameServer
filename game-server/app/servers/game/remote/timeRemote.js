@@ -5,11 +5,12 @@ var userDao = require('../../../dao/userDao');
 var dispatcher = require('../../../util/dispatcher');
 
 module.exports = function(app) {
-	return new GameRemote(app);
+	return new GameRemote(app, app.get('gameService'));
 };
 
-var GameRemote = function(app) {
+var GameRemote = function(app, gameService) {
 	this.app = app;
+	this.gameService = gameService;
 	this.userMap = {};
 };
 
@@ -39,7 +40,8 @@ handler.enter = function(userId, cb){
 		},
 		function(callback){
 			//查询server id
-			var sid = getSidByUserId(userId, this.app);
+			//var sid = getSidByUserId(userId, this.app);
+			var sid = this.gameService.queryUserServerId(userId, this.app);
 			if (sid === null) {
 				callback(null, {sid: ''});
 			} else {
