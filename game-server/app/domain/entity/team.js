@@ -14,39 +14,22 @@ function Team(teamId){
 	this.playerNum = 0;
 	this.playerArray = [];
 	this.teamStatus = 0;		//是否锁定
-	this.poker = poker.getXXPoker();
+	this.teamChannel = null;
+	this.poker = [];
+
+	var init = function() {
+		_
+		this.poker = poker.getXXPoker();
+
+	}
+
+	init();
 }
 
 var handler = Team.prototype;
 
-handler.createChannel = function(){
-	if(this.channel) {
-		return this.channel;
-	}
-	var channelName = channelUtil.getTeamChannelName(this.teamId);
-	this.channel = pomelo.app.get('channelService').getChannel(channelName, true);
-	if(this.channel) {
-		return this.channel;
-	}
-
-	return null;
-}
-
-handler.createChannel = function() {
-  if(this.channel) {
-    return this.channel;
-  }
-  var channelName = channelUtil.getTeamChannelName(this.teamId);
-  this.channel = pomelo.app.get('channelService').getChannel(channelName, true);
-  if(this.channel) {
-    return this.channel;
-  }
-  return null;
-};
-
-
-handler.addPlayer = function(param){
-	if (!param || typeof param !== 'object'){
+Team.prototype.addPlayer = function(data){
+	if (!data || typeof data !== 'object'){
 		return Code.Team.DATA_ERR;
 	}
 
@@ -54,13 +37,13 @@ handler.addPlayer = function(param){
 		return Code.Team.TEAM_FULL;
 	}
 
-	if (this.isPlayerInTeam(param.uid)){
+	if (this.isPlayerInTeam(data.userId)){
 		return Code.Team.ALREADY_IN_TEAM;
 	}
 
 	var hand = logic.createHandCard(this.poker);
 	if (!!hand && typeof(hand) === 'object'){
-		var player = {uid: param.uid, hand: hand.cards, patterns: hand.pattern, status: Code.Card.BACK};
+		var player = {userId: data.userId, hand: hand.cards, patterns: hand.pattern, status: Code.Card.BACK};
 
 		this.playerNum += 1;
 		this.playerArray.push(player);
@@ -71,35 +54,114 @@ handler.addPlayer = function(param){
 	}
 }
 
-handler.getTeammateHand = function(param){
-	if (!param || typeof(param) !== 'object'){
+Team.prototype.getTeammateHand = function(data){
+	if (!data || typeof(data) !== 'object'){
 		return Code.Team.DATA_ERR;
 	}
 
-	return getTeammateHand(param.uid, this.playerArray);
+	return getTeammateHand(data.userId, this.playerArray);
 }
 
 // is there a empty position in the team
-handler.isTeamHasPosition = function() {
+Team.prototype.isTeamHasPosition = function() {
   return this.getPlayerNum() < MAX_MEMBER_NUM;
 };
 
-handler.isPlayerInTeam = function(uid){
+Team.prototype.isPlayerInTeam = function(userId){
 	return true;
+}
+
+Team.prototype.createChannel = function(){
+	if (this.teamChannel) {
+		return this.teamChannel;
+	}
+
+	var channelName = channelUtil.getTeamChannelName(this.teamId);
+	this.teamChannel = pomelo.app.get('channelService').getChannel(channelName, true);
+	if (this.teamChannel){
+		return this.teamChannel;
+	}
+
+	return null;
+}
+
+
+/**
+* @param: {userId, serverId}
+*
+*/
+Team.prototype.addPlayer2Channel = function(data){
+	if (!this.teamChannel){
+		return false;
+	}
+
+	if (data) {
+		this.teamChannel.add(data.userId, data.serverId);
+		 return true;
+	}
+
+	return false;
+}
+
+/**
+* 
+* @param: {userId, serverId}
+* 
+*/
+Team.prototype.removePlayerFromChannel = function(data){
+	if (!this.teamChannel){
+		return false;
+	}
+
+	if (data) {
+		this.teamChannel.leave(data.userId, data.serverId);
+		return true;
+	}
+	return false;
+}
+
+/**
+* 
+* @param: {userId, serverId}
+* 
+*/
+Team.prototype.pushLeaveMsg2All = function(userId){
+	var ret = {result: Code.OK};
+	if (!this.teamChannel){
+		cb(null, ret);
+	}
+
+	var msg = {userId: userId};
+	this.teamChannel.pushMessage('onTeammateLeave', msg, function(error, _){
+		cb(null, ret);
+	})
+}
+
+Team.prototype.pushChatMsg2All = function(data){
+	if (!this.teamChannel){
+		return false;
+	}
+
+	var userId = data.userId;
+	if (!this.isPlayerInTeam(userId)) {
+		return false;
+	}
+
+	this.teamChannel.pushMessage('onChat', data, null);
 }
 
 function getAllTeammatesBasic(teammates){
 	var _teammatersIDS = [];
 	for (var i=0; i<teammates.length; ++i){
-		_teammatersIDS.push({uid: teammates[i].uid, status: teammates[i].status});
+		_teammatersIDS.push({userId: teammates[i].userId, status: teammates[i].status});
 	}
 
 	return _teammatersIDS;
 }
 
-function getTeammateHand(uid, teammates){
+function getTeammateHand(userId, teammates){
 	for (var i=0; i<teammates.length; ++i){
-		if (teammates[i].uid === uid){
+		if (teammates[i].userId === userId){
 			return teammates[i].hand;
 		}
 	}
@@ -107,9 +169,9 @@ function getTeammateHand(uid, teammates){
 	return null;
 }
 
-function getTeammateStatus(uid, teammates){
+function getTeammateStatus(userId, teammates){
 	for (var i=0; i<teammates.length; ++i){
-		if (teammates[i].uid === uid){
+		if (teammates[i].userId === userId){
 			return teammates[i].status;
 		}
 	}

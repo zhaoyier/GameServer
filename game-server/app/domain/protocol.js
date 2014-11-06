@@ -34,3 +34,16 @@ JoinTeamRes: {
 		status
 	}
 }
+
+QueryUserReq: {
+	int uid
+}
+
+QueryUserRes: {
+	int uid;
+	int avatar;
+	string username;
+	int vip;
+	int diamond;
+	int gold;
+}

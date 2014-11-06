@@ -17,9 +17,11 @@ SET FOREIGN_KEY_CHECKS=0;
 -- ----------------------------
 -- Table structure for `account`
 -- ----------------------------
-DROP TABLE IF EXISTS `account`;
-CREATE TABLE `account` (
+DROP TABLE IF EXISTS `Account`;
+CREATE TABLE `Account` (
   `uid` bigint(20) NOT NULL,
+  `recharge` int(11) unsigned NOT NULL,
+  `vip` int(11) unsigned NOT NULL,
   `diamond` int(11) unsigned NOT NULL,
   `gold` int(11) unsigned NOT NULL,
   `create_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -34,8 +36,8 @@ INSERT INTO `Account` VALUES ('1000000', '10', '110', '2014-10-26 23:16:41');
 -- ----------------------------
 -- Table structure for `accountlog`
 -- ----------------------------
-DROP TABLE IF EXISTS `accountlog`;
-CREATE TABLE `accountlog` (
+DROP TABLE IF EXISTS `AccountLog`;
+CREATE TABLE `AccountLog` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
   `uid` bigint(20) NOT NULL,
   `channel` int(11) DEFAULT NULL COMMENT '1、支付宝',
@@ -49,14 +51,14 @@ CREATE TABLE `accountlog` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- ----------------------------
--- Records of accountlog
+-- Records of AccountLog
 -- ----------------------------
 
 -- ----------------------------
 -- Table structure for `gamerecord`
 -- ----------------------------
-DROP TABLE IF EXISTS `gamerecord`;
-CREATE TABLE `gamerecord` (
+DROP TABLE IF EXISTS `GameRecord`;
+CREATE TABLE `GameRecord` (
   `uid` bigint(20) NOT NULL,
   `title` varchar(255) NOT NULL,
   `win` int(11) DEFAULT NULL,
@@ -67,7 +69,7 @@ CREATE TABLE `gamerecord` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- ----------------------------
--- Records of gamerecord
+-- Records of GameRecord
 -- ----------------------------
 
 -- ----------------------------

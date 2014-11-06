@@ -35,7 +35,7 @@ handler.enter = function(msg, session, next) {
 	async.waterfall([
 		function(cb){
 			//userDao.authAccount(username, password, cb);	
-			userDao.authAccount('zhaoyier', '111111', cb);	
+			userDao.authUser('zhaoyier', '111111', cb);	
 		},
 		function(res, cb){
 			uid = res.uid
@@ -52,8 +52,9 @@ handler.enter = function(msg, session, next) {
 			session.on('closed', onUserLeave.bind(null, self.app));
 			session.pushAll(cb);
 		},function(cb){
-			//self.app.rpc.chat.chatRemote.add(session, username, self.app.get('serverId'), 'aa', true, cb);
 			self.app.rpc.chat.chatRemote.add(session, uid, username, channelUtil.getGlobalChannelName(), cb);
+		},function(cb){
+			self.app.rpc.game.gameRemote.add(session, uid, cb);
 		}
 	], function(error, results){
 		console.log('-----------:\t', error, results);

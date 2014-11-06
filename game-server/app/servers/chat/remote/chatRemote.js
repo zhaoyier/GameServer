@@ -33,3 +33,5 @@ ChatRemote.prototype.kick = function(uid, cb){
 	this.chatService.kick(uid);
 	cb();
 };
+
+
