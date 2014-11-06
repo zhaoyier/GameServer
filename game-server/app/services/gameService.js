@@ -3,9 +3,11 @@ var underscore = require('underscore');
 var Code = require('../../../shared/code');
 var Team = require('../domain/entity/team');
 var Error = require('../consts/code');
+var dispatcher = require('../util/dispatcher');
 var logger = require('pomelo-logger').getLogger('gameservice', __filename);
 
 var GameService = function(app) {
+	console.log('^^^^^^^^^^^^^^^^^^\t\n\n\n\n\t');
 	this.app = app;
 	this.uidMap = {};
 	this.teamMap = {};

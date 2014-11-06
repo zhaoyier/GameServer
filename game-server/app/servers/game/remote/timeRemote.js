@@ -9,14 +9,17 @@ module.exports = function(app) {
 };
 
 var GameRemote = function(app, gameService) {
+	//console.log('^^^^^^^^^^^^^^^^^gameServi:\t\n\t', gameService);
 	this.app = app;
 	this.gameService = gameService;
 	this.userMap = {};
 };
 
-var handler = GameRemote.prototype;
+//var handler = GameRemote.prototype;
 
-handler.enter = function(userId, cb){
+GameRemote.prototype.enter = function(userId, cb){
+	console.log('------------------&&---------:\t', this.gameService);
+	var gameService = this.gameService;
 	async.parallel([
 		function(callback){
 			//查询帐号信息
@@ -41,7 +44,8 @@ handler.enter = function(userId, cb){
 		function(callback){
 			//查询server id
 			//var sid = getSidByUserId(userId, this.app);
-			var sid = this.gameService.queryUserServerId(userId, this.app);
+			console.log('***********gameService:\t', gameService);
+			var sid = gameService.queryUserServerId(userId);
 			if (sid === null) {
 				callback(null, {sid: ''});
 			} else {
@@ -50,10 +54,11 @@ handler.enter = function(userId, cb){
 		},
 	], function(error, res){
 		console.log('enter ===>', res);
-		this.userMap[userId] = res;
+		this.userMap[userId] = res[0];
 	})
 }
 
+/*
 handler.update = function(param, cb){
 	//更新玩家基本信息
 }
@@ -69,7 +74,7 @@ handler.query = function(userId, cb){
 	}
 
 	cb(201);
-}
+}*/
 
 /**
 * Get the connector server id assosiated with the userId
