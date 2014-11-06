@@ -38,7 +38,6 @@ handler.enter = function(msg, session, next) {
 			userDao.authUser('zhaoyier', '111111', cb);	
 		},
 		function(res, cb){
-			console.log('************:\t', res);
 			uid = res.userId
 			if (parseInt(uid) === 0) {
 				cb(Code.Entry.ERROR_USER_PWD, null);
@@ -53,10 +52,9 @@ handler.enter = function(msg, session, next) {
 			session.on('closed', onUserLeave.bind(null, self.app));
 			session.pushAll(cb);
 		},function(cb){
-			console.log('**********:\t', uid)
 			self.app.rpc.chat.chatRemote.add(session, uid, username, channelUtil.getGlobalChannelName(), cb);
 		},function(cb){
-			self.app.rpc.game.gameRemote.add(session, uid, cb);
+			self.app.rpc.game.gameRemote.enter(session, uid, cb);
 		}
 	], function(error, results){
 		console.log('-----------:\t', error, results);
