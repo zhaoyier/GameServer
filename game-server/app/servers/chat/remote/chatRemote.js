@@ -11,7 +11,6 @@ var ChatRemote = function(app, chatService) {
  *	Add player into channel
  */
 ChatRemote.prototype.add = function(uid, playerName, channelName, cb) {
-	console.log('------------++---:\t', this.chatService);
 	var code = this.chatService.add(uid, playerName, channelName);
 	cb(null, code);
 };

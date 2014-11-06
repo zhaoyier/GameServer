@@ -21,7 +21,6 @@ module.exports = ChatService;
  * @return {Number} see code.js
  */
 ChatService.prototype.add = function(uid, playerName, channelName) {
-	console.log('chat Service=========>', uid, playerName, channelName);
   var sid = getSidByUid(uid, this.app);
   if(!sid) {
     return Code.CHAT.FA_UNKNOWN_CONNECTOR;

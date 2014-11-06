@@ -57,7 +57,7 @@ userDao.queryUser = function(userId, cb){
 			utils.invokeCallback(cb, error, null);
 		} else {
 			if (!!res && res.length === 1){
-				utils.invokeCallback(cb, null, {code: 200, username: res[0]});
+				utils.invokeCallback(cb, null, {code: 200, username:res[0].username});
 				return ;
 			} else {
 				logger.error('');
@@ -131,7 +131,6 @@ userDao.consumeAccountDiamond = function(userId, diamond, cb){
 					if (error !== null) {
 
 					} else {
-						console.log(' ====>', res);
 						accountLog('diamond', {prime: prime, change: diamond, remain: remain});
 						utils.invokeCallback(cb, null, {code: 200, diamond: remain});	
 					}				
@@ -158,7 +157,6 @@ userDao.consumeAccountGold = function(userId, gold, cb){
 					if (error !== null) {
 						
 					} else {
-						console.log(' ====>', res);
 						accountLog('gold', {prime: prime, change: gold, remain: remain});
 						utils.invokeCallback(cb, null, {code: 200, gold: remain});	
 					}				

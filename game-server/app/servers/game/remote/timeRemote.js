@@ -9,7 +9,6 @@ module.exports = function(app) {
 };
 
 var GameRemote = function(app, gameService) {
-	//console.log('^^^^^^^^^^^^^^^^^gameServi:\t\n\t', gameService);
 	this.app = app;
 	this.gameService = gameService;
 	this.userMap = {};
@@ -18,9 +17,8 @@ var GameRemote = function(app, gameService) {
 //var handler = GameRemote.prototype;
 
 GameRemote.prototype.enter = function(userId, cb){
-	console.log('------------------&&---------:\t', this.gameService);
-	var gameService = this.gameService;
-	async.parallel([
+	//var gameService = this.gameService;
+	/*async.parallel([
 		function(callback){
 			//查询帐号信息
 			userDao.queryUser(userId, function(error, res){
@@ -43,19 +41,33 @@ GameRemote.prototype.enter = function(userId, cb){
 		},
 		function(callback){
 			//查询server id
-			//var sid = getSidByUserId(userId, this.app);
-			console.log('***********gameService:\t', gameService);
 			var sid = gameService.queryUserServerId(userId);
 			if (sid === null) {
 				callback(null, {sid: ''});
 			} else {
 				callback(null, {sid: sid});
 			} 
-		},
+		}
 	], function(error, res){
-		console.log('enter ===>', res);
-		this.userMap[userId] = res[0];
-	})
+		//this.userMap[userId] = us.extend({}, res[0], res[1], res[2]);
+		//console.log('enter ===>', error, us.extend({}, res[0], res[1], res[2]));
+		console.log('enter ===>', error, res);
+		cb(null, 'ok');
+	})*/
+
+	/*async.parallel([
+		function(call){
+        	call(null, {username: 'zhao'});
+    	},
+		function(call){
+        	call(null, {age: 30});
+    	}
+	], function(error, res){
+    	console.log(error, res);
+    	cb(null, res);
+	})*/
+	
+	cb(null, 'ok');
 }
 
 /*
