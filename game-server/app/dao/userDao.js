@@ -178,7 +178,7 @@ userDao.consumeAccountGold = function(userId, gold, cb){
 * @param {String} passwd
 * @param {function} cb
 */
-userDao.authAccount = function(username, password, cb){
+/*userDao.authAccount = function(username, password, cb){
 	var sql = 'select * from Users where username = ? and password = ?';
 	var args = [username, password];
 
@@ -276,7 +276,7 @@ userDao.queryUser = function(uid, cb){
 		}
 	})
 }
-
+*/
 /**
 * 充值
 * 

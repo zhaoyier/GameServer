@@ -82,7 +82,7 @@ app.configure('production|development', 'game', function() {
 })
 
 // Configure database
-app.configure('production|development', 'auth|connector|master', function() {
+app.configure('production|development', 'auth|connector|master|game', function() {
 	var dbclient = require('./app/dao/mysql/mysql').init(app);
 	app.set('dbclient', dbclient);
 	app.use(sync, {sync: {path:__dirname + '/app/dao/mapping', dbclient: dbclient}});
