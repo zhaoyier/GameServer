@@ -248,7 +248,7 @@ userDao.queryUser = function(uid, cb){
 			})	
 		},
 		function(callback){
-			var sql = 'select * from Account where uid = ?'；
+			var sql = 'select * from Account where uid = ?';
 			pomelo.app.get('dbclient').query(sql, [uid], function(error, res){
 				if (error !== null){
 
