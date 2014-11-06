@@ -1,4 +1,4 @@
-var message = require('../../consts/message');
+var message = require('../../consts/consts');
 
 var handler = module.exports;
 
