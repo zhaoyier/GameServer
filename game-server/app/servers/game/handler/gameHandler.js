@@ -1,3 +1,7 @@
+/**
+* 房间的信息不在本脚本中通知，只返回自己信息
+*/
+
 var async = require('async');
 var us = require('underscore');
 
@@ -39,7 +43,7 @@ handler.enter = function(msg, session, next){
                 if (error || res.code != 200){
                     callback(null, {});
                 } else {
-                    callback(null, {vip: res.vip})
+                    callback(null, {vip: res.vip, diamond: res.diamond, gold: res.gold})
                 }
             })
         },
@@ -53,25 +57,45 @@ handler.enter = function(msg, session, next){
         }
     ], function(error, res){
         var data = us.extend({}, res[0], res[1], res[2]);
-        console.log(data);
-        next(null, data);
+        gameService.enter(userId, data, function(error, res){
+            if (res.code === 200){
+                data['code'] = 200;
+                next(null, data);
+            } else {
+                data['code'] = 201;
+                next(null, data);
+            }
+        })
     })
 }
 
 /**
-*
-*@param: 
+* 查询其他玩家信息
 */
-handler.quit = function(msg, session, next){
-    next(null, {msg: 'hello'});
+handler.queryTeammate = function(msg, session, next){
+    //判断是否为队友
+    var userId = session.get('playerId');
+    var gameService = this.gameService;
+    //查询队友信息
+
 }
 
 /**
 *
 *@param: 
 */
-handler.join = function(msg, session, next){
+handler.joinGame = function(msg, session, next){
+    var gameService = this.gameService;
+
 	var _teamObj = this.gameService.joinTeam(msg.uid, function(error, res){
+        if (!error && !!res.teammate){
+
+        } else if (!error){
+
+        } else {
+
+        }
+
         if (!error) {
             /*加入房间*/
             if (!!res.teammate){
@@ -103,6 +127,7 @@ handler.join = function(msg, session, next){
 
         }
     });
+
 }
 
 /**
