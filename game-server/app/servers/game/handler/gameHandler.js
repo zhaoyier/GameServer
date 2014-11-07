@@ -20,6 +20,7 @@ var handler = GameHandler.prototype;
 */
 handler.enter = function(msg, session, next){
     var userId = session.get('playerId');
+	var gameService = this.gameService;
 
 	async.parallel([
         function(callback){
@@ -43,7 +44,7 @@ handler.enter = function(msg, session, next){
             })
         },
         function(callback){
-            var serverId = this.gameService.queryUserServerId(userId);
+            var serverId = gameService.queryUserServerId(userId);
             if (serverId != null) {
                 callback(null, {serverId: serverId});
             } else {
