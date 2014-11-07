@@ -1,4 +1,7 @@
-var async = require('async'); 
+var async = require('async');
+var us = require('underscore');
+
+var userDao = require('../../../dao/userDao');
 
 module.exports = function(app) {
     return new GameHandler(app, app.get('gameService'));
@@ -12,22 +15,46 @@ var GameHandler = function(app, gameService) {
 var handler = GameHandler.prototype;
 
 /**
-*
-*@param: 
-*/
-GameHandler.prototype.query = function(msg, session, next){
-    console.log("**********:\t", 'i am here');
-    next(null, {msg: 'hello'});
-}
-
-/**
-*
+* 进入游戏查询用户基本信息
 *@param: 
 */
 handler.enter = function(msg, session, next){
-	var uid = session.get('playerId');
-	
-    next(null, {msg: 'hello'});
+    var userId = session.get('playerId');
+
+	async.parallel([
+        function(callback){
+            //查询帐号信息
+            userDao.queryUser(userId, function(error, res){
+                if (error || res.code != 200){
+                    callback(null, {});
+                } else {
+                    callback(null, {username: res.username})
+                }
+            })
+        },
+        function(callback){
+            //查询帐户信息
+            userDao.queryAccount(userId, function(error, res){
+                if (error || res.code != 200){
+                    callback(null, {});
+                } else {
+                    callback(null, {vip: res.vip})
+                }
+            })
+        },
+        function(callback){
+            var serverId = this.gameService.queryUserServerId(userId);
+            if (serverId != null) {
+                callback(null, {serverId: serverId});
+            } else {
+                callback(null, {});
+            }
+        }
+    ], function(error, res){
+        var data = us.extend({}, res[0], res[1], res[2]);
+        console.log(data);
+        next(null, data);
+    })
 }
 
 /**
