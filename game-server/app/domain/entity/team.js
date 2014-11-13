@@ -66,6 +66,14 @@ Team.prototype.getTeammateHand = function(data){
 	return getTeammateHand(data.userId, this.playerArray);
 }
 
+Team.prototype.getPlayerNum = function(){
+	return this.playerNum;
+}
+
+Team.prototype.getTeammates = function(){
+	return this.playerArray;
+}
+
 // is there a empty position in the team
 Team.prototype.isTeamHasPosition = function() {
   return this.getPlayerNum() < MAX_MEMBER_NUM;
@@ -75,9 +83,7 @@ Team.prototype.isPlayerInTeam = function(userId){
 	return false;
 }
 
-Team.prototype.getPlayerNum = function(){
-	return this.playerNum;
-}
+
 
 Team.prototype.createChannel = function(){
 	if (this.teamChannel) {

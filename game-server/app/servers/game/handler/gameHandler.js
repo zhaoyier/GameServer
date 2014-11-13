@@ -111,11 +111,13 @@ handler.joinGame = function(msg, session, next){
 */
 handler.queryTeammate = function(msg, session, next){
     //判断是否为队友
-    var userId = session.get('playerId');
-    var gameService = this.gameService;
-    
-    //查询队友信息
-
+    var _userId = session.get('playerId');
+    var _gameService = this.gameService;
+    if (_gameService.checkTeammate(_userId, msg.userId)) {
+        next(null, {code: 200});
+    } else {
+        next(null, {code: 201});
+    }    
 }
 
 

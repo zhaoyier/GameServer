@@ -66,19 +66,19 @@ handler.createTeam = function(userId, cb){
 * @param: 
 */
 handler.joinTeam = function(userId, callback){
-	var _teamObj = null;
-	for (var _id in this.teamObjMap){
-		if (this.teamObjMap[_id].isTeamHasPosition()){
-			_teamObj = this.teamObjMap[_id];
+	var _id = 0;
+	for (var id in this.teamObjMap){
+		if (this.teamObjMap[id].isTeamHasPosition()){
+			_id = id;
 		}
 	}
 
 	/*创建房间or加入房间*/
-	if (_teamObj != null) {
-		var _teammates = _teamObj.addPlayer({userId: userId});
-		callback(null, {teamId: _teamObj.teamId, teammates: _teammates});
+	if (_id != 0) {
+		var _teammates = this.teamObjMap[_id].addPlayer({userId: userId});
+		callback(null, {teamId: this.teamObjMap[_id].teamId, teammates: _teammates});
 	} else {
-		_teamObj = this.createTeam(userId, function(error, res){
+		this.createTeam(userId, function(error, res){
 			if (!error) {
 				callback(null, {teamId: res.teamId, teammates: res.teammates});
 			} else {
@@ -98,12 +98,16 @@ handler.checkTeammate = function(userId, teammate){
 	var _teamId = this.teamMap[userId];
 	if (!!_teamId){
 		var _teamObj = this.teamObjMap[_teamId];
-		if (!!_teamObj){
-
-		} else {
-
+		if (!!_teamObj && !!_teamObj.getTeammates()){
+			var _teammates = _teamObj.getTeammates();
+			for (var i=0; i<_teammates.length; ++i){
+				if (_teammates[i].userId === userId) {
+					return true;
+				}
+			}
 		}
 	}
+	return false;
 }
 
 handler.leave = function(uid){
