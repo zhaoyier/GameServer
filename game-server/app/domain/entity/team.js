@@ -45,14 +45,15 @@ Team.prototype.addPlayer = function(data){
 	if (this.isPlayerInTeam(data.userId)){
 		return Code.Team.ALREADY_IN_TEAM;
 	}
-
+	
+	console.log('++++++++++++add:\t', data);
 	var hand = logic.createHandCard(this.poker);
 	if (!!hand && typeof(hand) === 'object'){
 		var player = {userId: data.userId, hand: hand.cards, patterns: hand.pattern, status: Code.Card.BACK};
 
 		this.playerNum += 1;
 		this.playerArray.push(player);
-
+		console.log('+++++++++++++array:\t', this.playerArray);
 		return getAllTeammatesBasic(this.playerArray);
 	} else {
 		return null;
