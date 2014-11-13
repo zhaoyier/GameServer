@@ -4,11 +4,11 @@ var Code = require('../../../shared/code');
 var Team = require('../domain/entity/team');
 var Error = require('../consts/code');
 var dispatcher = require('../util/dispatcher');
-var logger = require('pomelo-logger').getLogger('gameservice', __filename);
+//var logger = require('pomelo-logger').getLogger('gameservice', __filename);
 
 var GameService = function(app) {
-	console.log('^^^^^^^^^^^^^^^^^^\t\n\n\n\n\t');
-	this.app = app;
+	//this.app = app;
+	this.app = null;
 	this.uidMap = {};
 	this.teamMap = {};
 	this.teamObjMap = {};
@@ -18,18 +18,91 @@ module.exports = GameService;
 var teamId = 0;
 var handler = GameService.prototype;
 
-handler.add = function(uid, teamId){
-	var sid = getSidByUserId(uid, this.app);
-	if (!sid){
-		return Code.FA_UNKNOWN_CONNECTOR;
+
+/**
+* 进入游戏，记录玩家信息
+* @param: 
+*/
+handler.enterGame = function(userId, data, cb){
+	if (!!userId && !!data && typeof(cb) === 'function'){
+		addUserRecord(this, userId, data);
+		cb(null, {code: 200});
+	} else {
+		cb(null, {code: 201});
 	}
-	
-	if (checkDuplicate(this, uid)){
-		return Code.OK;
+}
+
+/**
+* 查询玩家基本信息
+* @param: 
+*/
+handler.queryUserBasic = function(userId, cb){
+	var _user = this.uidMap[userId];
+	if (!!_user) {
+		cb(null, _user);
+	} else {
+		cb(201);
+	}
+}
+
+/**
+* 创建房间
+* @param: 
+*/
+handler.createTeam = function(userId){
+	var _teamObj = new Team(++teamId);
+	var res = _teamObj.addPlayer(userId);
+	if (Error.OK){
+		this.teamMap[userId] = _teamObj.teamId;
+		this.teamObjMap[_teamObj.teamId] = _teamObj;	
+	} else {
+		return null;
+	}
+}
+
+/**
+* 选择房间进入游戏
+* @param: 
+*/
+handler.joinTeam = function(userId, callback){
+	var _teamObj = null;
+	for (var _id in this.teamObjMap){
+		if (this.teamObjMap[_id].isTeamHasPosition()){
+			_teamObj = this.teamObjMap[_id];
+		}
 	}
 
-	addRecord(this, uid, teamId);
-	return Code.OK;
+	/*创建房间or加入房间*/
+	if (_teamObj != null) {
+		var _teammates = _teamObj.addPlayer({uid: userId});
+		callback(null, {teamId: _teamObj.teamId, teammates: _teammates});
+		return ;
+	} else {
+		_teamObj = this.createTeam(userId);
+		if (_teamObj !== null){
+			callback(null, {teamId: _teamObj.teamId});
+			return ;
+		}
+	}
+
+	return callback(201);
+}
+
+/**
+* 检查是否为队友
+* @param: 
+*/
+
+handler.checkTeammate = function(userId, teammate){
+	var _teamId = this.teamMap[userId];
+	if (!!_teamId){
+		var _teamObj = this.teamObjMap[_teamId];
+		if (!!_teamObj){
+
+		} else {
+
+		}
+	}
 }
 
 handler.leave = function(uid){
@@ -39,7 +112,7 @@ handler.leave = function(uid){
 		for (var i=0; i<this.teamMap[record.teamId].length; ++i){
 			if (this.teamMap[record.teamId][i]['uid'] === uid){
 				this.teamMap[record.teamId].splice(i, 1);
-			}
+			}		
 		}
 	} else {
 		log('leave', {uid: uid});
@@ -60,47 +133,6 @@ handler.kick = function(uid, teamId){
 	return Code.Ok;
 }
 
-/**
-* 
-*
-*/
-handler.joinTeam = function(uid, callback){
-	var _teamObj = null;
-	for (var _id in this.teamObjMap){
-		if (this.teamObjMap[_id].isTeamHasPosition()){
-			_teamObj = this.teamObjMap[_id];
-		}
-	}
-
-	/**/
-	if (_teamObj != null) {
-		var _teammates = _teamObj.addPlayer({uid: uid});
-		callback(null, {teamId: _teamObj.teamId, teammate: _teammates});
-		return ;
-	} else {
-		_teamObj = this.createTeam(uid);
-		if (_teamObj !== null){
-			callback(null, {teamId: _teamObj.teamId});
-			return ;
-		}
-	}
-
-	return callback(201);
-}
-
-
-
-handler.createTeam = function(uid){
-	var teamObj = new Team(++teamId);
-	var res = teamObj.addPlayer(uid);
-	if (Error.OK){
-		this.teamObjMap[teamObj.teamId] = teamObj;	
-	} else {
-		return null;
-	}
-	
-}
-
 
 handler.pushMessageToPlayer = function(){
 	
@@ -111,7 +143,7 @@ handler.pushMessageToTeam = function(fun, teamId){
 }
 
 handler.queryUserServerId = function(userId){
-	return getSidByUserId(userId, this.app);
+	return getServerIdByUserId(userId, this.app);
 }
 
 
@@ -119,24 +151,23 @@ var checkDuplicate = function(service, uid, teamId) {
 	return !!service.uidMap[uid];
 };
 
-var addRecord = function(service, uid, teamId, sid){
-	var record = {uid: uid, teamId: teamId, sid: sid};
-	service.uidMap[uid] = record;
+var addUserRecord = function(service, uid, data){
+	service.uidMap[uid] = data;
+}
 
-	var players = teamMap[teamId] ? teamMap[teamId] : [];
-	players.push({uid: uid, sid: sid});
-	teamMap[teamId] = players;
+var addTeamRecord = function(service, uid, data){
+
 }
 
 var log = function(fun, msg){
 	var timestamp = new Date();
-	logger.error(timestamp+':'+fun+':'+msg);
+	//logger.error(timestamp+':'+fun+':'+msg);
 }
 
 /**
 * Get the connector server id assosiated with the uid
 **/
-var getSidByUserId = function(userId, app) {
+var getServerIdByUserId = function(userId, app) {
   var connector = dispatcher.dispatch(userId, app.getServersByType('connector'));
   if(connector) {
     return connector.id;
