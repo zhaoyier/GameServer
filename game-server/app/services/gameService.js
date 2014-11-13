@@ -7,8 +7,8 @@ var dispatcher = require('../util/dispatcher');
 //var logger = require('pomelo-logger').getLogger('gameservice', __filename);
 
 var GameService = function(app) {
-	//this.app = app;
-	this.app = null;
+	this.app = app;
+	//this.app = null;
 	this.uidMap = {};
 	this.teamMap = {};
 	this.teamObjMap = {};

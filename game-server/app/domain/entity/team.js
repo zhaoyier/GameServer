@@ -93,7 +93,9 @@ Team.prototype.updateTeamInfo = function(){
 
 	if (Object.keys(userObjDict).length > 0) {
 		console.log('============updateTeamInfo:\t', userObjDict);
-		this.teamChannel.pushMessage('onUpdateTeam', userObjDict, null);
+		this.teamChannel.pushMessage('onUpdateTeam', userObjDict, null, function(error, res){
+			console.log('++++++++++++++:\t', error, res);
+		});
 	}
 }
 
@@ -170,6 +172,7 @@ Team.prototype.addPlayer2Channel = function(data){
 	}
 
 	if (data) {
+		console.log('===========addPlayer2Channel>>>>>:\t', data);
 		this.teamChannel.add(data.userId, data.serverId);
 		 return true;
 	}
