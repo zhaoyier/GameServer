@@ -1,6 +1,7 @@
 /**
 * 队伍信息直接在这里发送
 */
+var pomelo = require('pomelo');
 
 var logic = require('../logic/xxLogic');
 var poker = require('../config/poker');
@@ -34,7 +35,7 @@ function Team(teamId){
 var handler = Team.prototype;
 
 Team.prototype.addPlayer = function(data){
-	if (!data || typeof data !== 'object' || !data.userId){
+	if (!data || typeof data !== 'object' || !data.userId || !data.serverId){
 		return Code.Team.DATA_ERR;
 	}
 
@@ -42,19 +43,84 @@ Team.prototype.addPlayer = function(data){
 		return Code.Team.TEAM_FULL;
 	}
 
-	if (this.isPlayerInTeam(data.userId)){
+	if (this.isPlayerInTeam(data.userId)) {
 		return Code.Team.ALREADY_IN_TEAM;
 	}
+
+	if (!doAddPlayer(this, data)){
+		return Code.Team.SYS_ERROR;
+	}
+
+	if (!this.isPlayerInTeam(data.userId)){
+		return Code.Team.SYS_ERROR;
+	}
+
+	if (!this.addPlayer2Channel(data)){
+		return Code.Team.SYS_ERROR;
+	}
+
+	if (this.playerNum < MAX_MEMBER_NUM) {
+		this.playerNum++;
+	}
+
+	this.updateTeamInfo();
+
+	return Code.OK;
 	
-	var hand = logic.createHandCard(this.poker);
+	/*var hand = logic.createHandCard(this.poker);
 	if (!!hand && typeof(hand) === 'object'){
 		var player = {userId: data.userId, hand: hand.cards, patterns: hand.pattern, status: Code.Card.BACK};
 
 		this.playerNum += 1;
 		this.playerArray.push(player);
+
+
 		return getAllTeammatesBasic(this.playerArray);
 	} else {
 		return null;
+	}*/
+}
+
+Team.prototype.doAddPlayer = function(teamObj, data){
+	var hand = logic.createHandCard(teamObj.poker);
+	if (!!hand && typeof(hand) === 'object'){
+		var player = {userId: data.userId, hand: hand.cards, patterns: hand.pattern, status: Code.Card.BACK};
+		teamObj.playerArray.push(player);
+		return true;
+	} else {
+		return false;
+	}
+}
+
+Team.prototype.updateTeamInfo = function(){
+	var userObjDict = {};
+	var users = this.playerArray;
+	for (var i in users){
+		var userId = users[i].userId;
+		if (userId === 0) {
+			continue;
+		}
+
+		userObjDict[userId] = {status: users[i].status};
+	}
+
+	if (Object.keys(userObjDict).length > 0) {
+		console.log('============updateTeamInfo:\t', userObjDict);
+		this.channel.pushMessage('onUpdateTeam', userObjDict, null);
+	}
+}
+
+Team.prototype.getTeammatesBasic = function(data){
+	if (!data || typeof(data) != 'object') {
+		return null;
+	} else {
+		var _teammatesBasic ＝ {}, _teammates = this.playerArray;
+		for (var i=0; i<_teammates.length; ++i) {
+			if (_teammates[i].userId != 0 && _teammates[i].userId != data.userId) {
+				_teammatesBasic[_teammates[i].userId] = {status: _teammates[i].status};
+			}
+		}
+		return _teammatesBasic;
 	}
 }
 
@@ -80,6 +146,13 @@ Team.prototype.isTeamHasPosition = function() {
 };
 
 Team.prototype.isPlayerInTeam = function(userId){
+	var users = this.playerArray;
+	for (var i in users) {
+		if (users[i].userId != 0 && users[i].userId === userId) {
+			return true;
+		}
+	}
+
 	return false;
 }
 
@@ -91,7 +164,7 @@ Team.prototype.createChannel = function(){
 	}
 
 	var channelName = channelUtil.getTeamChannelName(this.teamId);
-	//this.teamChannel = pomelo.app.get('channelService').getChannel(channelName, true);
+	this.teamChannel = pomelo.app.get('channelService').getChannel(channelName, true);
 	if (this.teamChannel){
 		return this.teamChannel;
 	}
@@ -164,14 +237,18 @@ Team.prototype.pushChatMsg2All = function(data){
 	this.teamChannel.pushMessage('onChat', data, null);
 }
 
-Team.prototype.pushDynamicMsg2All = function(data){
+Team.prototype.pushTeamMsg2All = function(data){
 	if (!this.teamChannel) {
 		return false;
 	}
 
-
-	this.teamChannel.pushMessage('onDynamicMsg', data, null);
+	this.teamChannel.pushMessage('onTeamMsg', data, null);
+	return true;
 }
+
+//Team.prototype.getTeammatesBasic = function(data){
+	
+//}
 
 function getAllTeammatesBasic(teammates){
 	var _teammatersIDS = [];

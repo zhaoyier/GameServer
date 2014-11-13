@@ -20,7 +20,8 @@ module.exports = {
     Team: {
         DATA_ERR:1401,
         TEAM_FULL: 1402,
-        ALREADY_IN_TEAM: 1403
+        ALREADY_IN_TEAM: 1403,
+        SYS_ERROR: 1404
     },
 	Card: {
 		BACK: 0
