@@ -51,10 +51,12 @@ handler.queryUserBasic = function(userId, cb){
 */
 handler.createTeam = function(userId){
 	var _teamObj = new Team(++teamId);
-	var res = _teamObj.addPlayer(userId);
+	var res = _teamObj.addPlayer({userId: userId});
 	if (Error.OK){
 		this.teamMap[userId] = _teamObj.teamId;
-		this.teamObjMap[_teamObj.teamId] = _teamObj;	
+		this.teamObjMap[_teamObj.teamId] = _teamObj;
+		console.log('+++>>>>:\t', _teamObj, '|||||', res);	
+		return _teamObj;
 	} else {
 		return null;
 	}

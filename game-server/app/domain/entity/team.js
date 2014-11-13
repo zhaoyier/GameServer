@@ -73,7 +73,11 @@ Team.prototype.isTeamHasPosition = function() {
 };
 
 Team.prototype.isPlayerInTeam = function(userId){
-	return true;
+	return false;
+}
+
+Team.prototype.getPlayerNum = function(){
+	return this.playerNum;
 }
 
 Team.prototype.createChannel = function(){
@@ -82,7 +86,7 @@ Team.prototype.createChannel = function(){
 	}
 
 	var channelName = channelUtil.getTeamChannelName(this.teamId);
-	this.teamChannel = pomelo.app.get('channelService').getChannel(channelName, true);
+	//this.teamChannel = pomelo.app.get('channelService').getChannel(channelName, true);
 	if (this.teamChannel){
 		return this.teamChannel;
 	}

@@ -21,6 +21,9 @@ module.exports = {
         DATA_ERR:1401,
         TEAM_FULL: 1402,
         ALREADY_IN_TEAM: 1403
-    }
+    },
+	Card: {
+		BACK: 0
+	}
 	
 }

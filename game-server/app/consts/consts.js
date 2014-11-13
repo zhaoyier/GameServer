@@ -22,6 +22,9 @@ module.exports = {
 		BACK: 0,
 		FRONT: 1,
 	},
+	XXRefer: {
+		REFER_HEX:16
+	},
 	XXConstant: {
 		UNKNOWN_ERROR: -1,
 		WIN: 0,
