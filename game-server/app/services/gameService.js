@@ -52,7 +52,8 @@ handler.queryUserBasic = function(userId, callback){
 handler.createTeam = function(userId, callback){
 	var _teamObj = new Team(++teamId);
 	var status = _teamObj.addPlayer({userId: userId});
-
+	
+	console.log('===========createTeam:\t', status);
 	if (status === 200) {
 		this.teamMap[userId] = _teamObj.teamId;
 		this.teamObjMap[_teamObj.teamId] = _teamObj;
@@ -96,7 +97,7 @@ handler.joinTeam = function(userId, callback){
 		//callback(null, {teamId: this.teamObjMap[_index].teamId, teammates: _teammates});
 	} else {
 		var _teamId = this.createTeam(userId);
-		console.log('==============>>>>>joinTeam:\t', status);
+		console.log('==============>>>>>joinTeam:\t', _teamId);
 		if (_teamId != 0) {
 			callback(null, {teamId: _teamId});
 		} else {

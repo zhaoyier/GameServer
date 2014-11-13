@@ -35,7 +35,7 @@ function Team(teamId){
 var handler = Team.prototype;
 
 Team.prototype.addPlayer = function(data){
-	if (!data || typeof data !== 'object' || !data.userId || !data.serverId){
+	if (!data || typeof data !== 'object' || !data.userId){
 		return Code.Team.DATA_ERR;
 	}
 
@@ -47,7 +47,7 @@ Team.prototype.addPlayer = function(data){
 		return Code.Team.ALREADY_IN_TEAM;
 	}
 
-	if (!doAddPlayer(this, data)){
+	if (!this.doAddPlayer(this, data)){
 		return Code.Team.SYS_ERROR;
 	}
 
@@ -106,7 +106,7 @@ Team.prototype.updateTeamInfo = function(){
 
 	if (Object.keys(userObjDict).length > 0) {
 		console.log('============updateTeamInfo:\t', userObjDict);
-		this.channel.pushMessage('onUpdateTeam', userObjDict, null);
+		this.teamChannel.pushMessage('onUpdateTeam', userObjDict, null);
 	}
 }
 
@@ -114,7 +114,7 @@ Team.prototype.getTeammatesBasic = function(data){
 	if (!data || typeof(data) != 'object') {
 		return null;
 	} else {
-		var _teammatesBasic ＝ {}, _teammates = this.playerArray;
+		var _teammatesBasic = {}, _teammates = this.playerArray;
 		for (var i=0; i<_teammates.length; ++i) {
 			if (_teammates[i].userId != 0 && _teammates[i].userId != data.userId) {
 				_teammatesBasic[_teammates[i].userId] = {status: _teammates[i].status};
