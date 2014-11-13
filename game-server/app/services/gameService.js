@@ -49,16 +49,16 @@ handler.queryUserBasic = function(userId, cb){
 * 创建房间
 * @param: 
 */
-handler.createTeam = function(userId){
+handler.createTeam = function(userId, cb){
 	var _teamObj = new Team(++teamId);
 	var res = _teamObj.addPlayer({userId: userId});
 	if (Error.OK){
 		this.teamMap[userId] = _teamObj.teamId;
 		this.teamObjMap[_teamObj.teamId] = _teamObj;
-		console.log('+++>>>>:\t', _teamObj, '|||||', res);	
-		return _teamObj;
+		//console.log('===>>>>:\t', _teamObj, '|||||', res);
+		cb(null, {teamId: _teamObj.teamId, teammates: res});
 	} else {
-		return null;
+		cb(201);
 	}
 }
 
@@ -80,11 +80,11 @@ handler.joinTeam = function(userId, callback){
 		callback(null, {teamId: _teamObj.teamId, teammates: _teammates});
 		return ;
 	} else {
-		_teamObj = this.createTeam(userId);
-		if (_teamObj !== null){
-			callback(null, {teamId: _teamObj.teamId});
-			return ;
-		}
+		_teamObj = this.createTeam(userId, function(error, res){
+			if (!error) {
+				callback(null, {teamId: res.teamId, teammates: res.teammates});
+			}
+		})
 	}
 
 	return callback(201);
@@ -95,7 +95,7 @@ handler.joinTeam = function(userId, callback){
 * @param: 
 */
 
-handler.checkTeammate = function(userId, teammate){
+handler.checkTeammate = function(userId, teammate){	
 	var _teamId = this.teamMap[userId];
 	if (!!_teamId){
 		var _teamObj = this.teamObjMap[_teamId];
