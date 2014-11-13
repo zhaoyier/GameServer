@@ -24,7 +24,7 @@ var handler = GameHandler.prototype;
 */
 handler.enter = function(msg, session, next){
     var userId = session.get('playerId');
-	var gameService = this.gameService;
+	var _gameService = this.gameService;
 
 	async.parallel([
         function(callback){
@@ -48,7 +48,7 @@ handler.enter = function(msg, session, next){
             })
         },
         function(callback){
-            var serverId = gameService.queryUserServerId(userId);
+            var serverId = _gameService.queryUserServerId(userId);
             if (serverId != null) {
                 callback(null, {serverId: serverId});
             } else {
@@ -57,7 +57,7 @@ handler.enter = function(msg, session, next){
         }
     ], function(error, res){
         var data = us.extend({}, res[0], res[1], res[2]);
-        gameService.enter(userId, data, function(error, res){
+        _gameService.enterGame(userId, data, function(error, res){
             if (res.code === 200){
                 data['code'] = 200;
                 next(null, data);
@@ -70,65 +70,54 @@ handler.enter = function(msg, session, next){
 }
 
 /**
-* 查询其他玩家信息
+* 进入房间
+*@param: 
+*/
+handler.joinGame = function(msg, session, next){
+    var _gameService = this.gameService;
+
+	var _teamObj = _gameService.joinTeam(msg.uid, function(error, res){
+        if (!error && !!res.teammates){
+            //加入房间, 查询所有队友信息, 返回客户端
+            var start = 0, _teamId = res.teamId, _teammates = [];
+            async.whilst(
+                function(){return start < res.teammates.length; },
+                function(cb){
+                    _gameService.queryUserBasic(res.teammates[start].userId, function(error, user){
+                        if (!error && !!user){
+                            _teammates.push(user);
+                        }
+                        ++start;
+                        cb(null, 'ok');
+                    })
+                }, 
+                function(error, res){
+                    next(null, {code: 200, teamId: _teamId, teammates: _teammates});
+                }
+            )
+        } else if (!error){
+            //创建房间
+            next(null, {code: 200, teamId: res.teamId})
+        } else {
+            //出现错误
+            next(null, {code: 201});
+        }
+    });
+
+}
+
+/**
+* 查询队友信息
 */
 handler.queryTeammate = function(msg, session, next){
     //判断是否为队友
     var userId = session.get('playerId');
     var gameService = this.gameService;
+    
     //查询队友信息
 
 }
 
-/**
-*
-*@param: 
-*/
-handler.joinGame = function(msg, session, next){
-    var gameService = this.gameService;
-
-	var _teamObj = this.gameService.joinTeam(msg.uid, function(error, res){
-        if (!error && !!res.teammate){
-
-        } else if (!error){
-
-        } else {
-
-        }
-
-        if (!error) {
-            /*加入房间*/
-            if (!!res.teammate){
-                var start = 0;
-                async.whilst(
-                    function(){ return start < res.teammate.length; },
-                    function(cb){
-                        this.app.rpc.game.gameRemote.query(res.teammate[start].uid, function(error, player){
-                            if (error) {
-                                
-                            } else {
-                                
-                            }
-                        })
-                    },
-                    function(error, res){
-
-                    }
-                )
-            } else {
-                /*新建房间*/
-                next(null, {teamId: res.teamId});
-                return ;
-            }
-            //1、查询队友和自己的信息
-            //2、判断是新建房间还是加入，
-            //3、如果新建房间利用next，如果加入通知队友
-        } else {
-
-        }
-    });
-
-}
 
 /**
 *

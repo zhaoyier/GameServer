@@ -1,3 +1,7 @@
+/**
+* 队伍信息直接在这里发送
+*/
+
 var logic = require('../logic/xxLogic');
 var poker = require('../config/poker');
 var channelUtil = require('../../util/channelUtil');
@@ -17,10 +21,11 @@ function Team(teamId){
 	this.teamChannel = null;
 	this.poker = [];
 
+	var _this = this;
 	var init = function() {
-		_
-		this.poker = poker.getXXPoker();
-
+		_this.teamId = teamId;
+		_this.poker = poker.getXXPoker();
+		_this.createChannel();
 	}
 
 	init();
@@ -148,6 +153,15 @@ Team.prototype.pushChatMsg2All = function(data){
 	}
 
 	this.teamChannel.pushMessage('onChat', data, null);
+}
+
+Team.prototype.pushDynamicMsg2All = function(data){
+	if (!this.teamChannel) {
+		return false;
+	}
+
+
+	this.teamChannel.pushMessage('onDynamicMsg', data, null);
 }
 
 function getAllTeammatesBasic(teammates){

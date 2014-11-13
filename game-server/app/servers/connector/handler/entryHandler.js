@@ -53,9 +53,7 @@ handler.enter = function(msg, session, next) {
 			session.pushAll(cb);
 		},function(cb){
 			self.app.rpc.chat.chatRemote.add(session, uid, username, channelUtil.getGlobalChannelName(), cb);
-		}/*,function(cb){
-			self.app.rpc.game.timeRemote.enter(session, uid, cb);
-		}*/
+		}
 	], function(error, results){
 		console.log('-----------:\t', error, results);
 		next(null, {users: players});
