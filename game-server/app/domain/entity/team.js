@@ -35,7 +35,7 @@ function Team(teamId){
 var handler = Team.prototype;
 
 Team.prototype.addPlayer = function(data){
-	if (!data || typeof data !== 'object' || !data.userId){
+	if (!data || typeof data !== 'object' || !data.userId || !data.serverId){
 		return Code.Team.DATA_ERR;
 	}
 
@@ -66,25 +66,12 @@ Team.prototype.addPlayer = function(data){
 	this.updateTeamInfo();
 
 	return Code.OK;
-	
-	/*var hand = logic.createHandCard(this.poker);
-	if (!!hand && typeof(hand) === 'object'){
-		var player = {userId: data.userId, hand: hand.cards, patterns: hand.pattern, status: Code.Card.BACK};
-
-		this.playerNum += 1;
-		this.playerArray.push(player);
-
-
-		return getAllTeammatesBasic(this.playerArray);
-	} else {
-		return null;
-	}*/
 }
 
 Team.prototype.doAddPlayer = function(teamObj, data){
 	var hand = logic.createHandCard(teamObj.poker);
 	if (!!hand && typeof(hand) === 'object'){
-		var player = {userId: data.userId, hand: hand.cards, patterns: hand.pattern, status: Code.Card.BACK};
+		var player = {userId: data.userId, serverId: data.serverId, hand: hand.cards, patterns: hand.pattern, status: Code.Card.BACK};
 		teamObj.playerArray.push(player);
 		return true;
 	} else {
