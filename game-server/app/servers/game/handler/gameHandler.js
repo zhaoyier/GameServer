@@ -76,7 +76,7 @@ handler.enter = function(msg, session, next){
 handler.joinGame = function(msg, session, next){
     var _gameService = this.gameService;
 
-	var _teamObj = _gameService.joinTeam(msg.uid, function(error, res){
+	var _teamObj = _gameService.joinTeam(msg.userId, function(error, res){
         if (!error && !!res.teammates){
             //加入房间, 查询所有队友信息, 返回客户端
             var start = 0, _teamId = res.teamId, _teammates = [];
