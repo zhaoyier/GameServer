@@ -34,7 +34,7 @@ function Team(teamId){
 var handler = Team.prototype;
 
 Team.prototype.addPlayer = function(data){
-	if (!data || typeof data !== 'object'){
+	if (!data || typeof data !== 'object' || !data.userId){
 		return Code.Team.DATA_ERR;
 	}
 
@@ -46,14 +46,12 @@ Team.prototype.addPlayer = function(data){
 		return Code.Team.ALREADY_IN_TEAM;
 	}
 	
-	console.log('++++++++++++add:\t', data);
 	var hand = logic.createHandCard(this.poker);
 	if (!!hand && typeof(hand) === 'object'){
 		var player = {userId: data.userId, hand: hand.cards, patterns: hand.pattern, status: Code.Card.BACK};
 
 		this.playerNum += 1;
 		this.playerArray.push(player);
-		console.log('+++++++++++++array:\t', this.playerArray);
 		return getAllTeammatesBasic(this.playerArray);
 	} else {
 		return null;

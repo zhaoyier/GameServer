@@ -68,7 +68,6 @@ handler.createTeam = function(userId, cb){
 handler.joinTeam = function(userId, callback){
 	var _teamObj = null;
 	for (var _id in this.teamObjMap){
-		console.log('***********>>>>:\t', _id, this.teamObjMap[_id].playerArray);
 		if (this.teamObjMap[_id].isTeamHasPosition()){
 			_teamObj = this.teamObjMap[_id];
 		}
@@ -77,10 +76,8 @@ handler.joinTeam = function(userId, callback){
 	/*创建房间or加入房间*/
 	if (_teamObj != null) {
 		var _teammates = _teamObj.addPlayer({userId: userId});
-		console.log('++++++++++++>>>>:\t', _teammates);
 		callback(null, {teamId: _teamObj.teamId, teammates: _teammates});
 	} else {
-		console.log('------------->>>>>>:\t');
 		_teamObj = this.createTeam(userId, function(error, res){
 			if (!error) {
 				callback(null, {teamId: res.teamId, teammates: res.teammates});
