@@ -55,7 +55,6 @@ handler.createTeam = function(userId, cb){
 	if (Error.OK){
 		this.teamMap[userId] = _teamObj.teamId;
 		this.teamObjMap[_teamObj.teamId] = _teamObj;
-		//console.log('===>>>>:\t', _teamObj, '|||||', res);
 		cb(null, {teamId: _teamObj.teamId, teammates: res});
 	} else {
 		cb(201);
@@ -78,16 +77,16 @@ handler.joinTeam = function(userId, callback){
 	if (_teamObj != null) {
 		var _teammates = _teamObj.addPlayer({uid: userId});
 		callback(null, {teamId: _teamObj.teamId, teammates: _teammates});
-		return ;
 	} else {
 		_teamObj = this.createTeam(userId, function(error, res){
 			if (!error) {
 				callback(null, {teamId: res.teamId, teammates: res.teammates});
+			} else {
+				callback(201);
 			}
 		})
 	}
 
-	return callback(201);
 }
 
 /**

@@ -4,5 +4,5 @@ var service = new game();
 
 service.joinTeam(100, function(error, res) {
 	// body...
-	console.log(res);
+	console.log('=========>>>>>:\t', res);
 })
