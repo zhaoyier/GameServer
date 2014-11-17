@@ -114,7 +114,7 @@ ChatService.prototype.pushByPlayerName = function(playerName, msg, cb) {
     cb(null, Code.CHAT.FA_USER_NOT_ONLINE);
     return;
   }
-
+	console.log('====================pushByPlayerName>>>')
   this.app.get('channelService').pushMessageByUids(Event.chat, msg, [{uid: record.uid, sid: record.sid}], cb);
 };
 

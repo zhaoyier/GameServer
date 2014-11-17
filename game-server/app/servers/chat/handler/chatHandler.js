@@ -21,7 +21,7 @@ var ChannelHandler = function(app, chatService) {
  * @param  {Function} next next stemp callback
  *
  */
-ChannelHandler.prototype.sendi = function(msg, session, next) {
+ChannelHandler.prototype.send = function(msg, session, next) {
 	var target = msg.target;
 	var channelName = getChannelName(msg);
 	var username = session.get('playerName');

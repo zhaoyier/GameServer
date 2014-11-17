@@ -31,13 +31,15 @@ handler.enter = function(msg, session, next) {
 	var username = msg.username, password = msg.password;
 	var self = this;
 	//authAccount
-	var uid, players;
+	var uid, player;
 	async.waterfall([
 		function(cb){
-			//userDao.authAccount(username, password, cb);	
-			userDao.authUser('zhaoyier', '111111', cb);	
+			console.log('===================enter>>>:\t', username, password)
+			userDao.authUser(username, password, cb);	
+			//userDao.authUser('zhaoyier', '111111', cb);	
 		},
 		function(res, cb){
+			player = res;
 			uid = res.userId
 			if (parseInt(uid) === 0) {
 				cb(Code.Entry.ERROR_USER_PWD, null);
@@ -55,8 +57,8 @@ handler.enter = function(msg, session, next) {
 			self.app.rpc.chat.chatRemote.add(session, uid, username, channelUtil.getGlobalChannelName(), cb);
 		}
 	], function(error, results){
-		console.log('-----------:\t', error, results);
-		next(null, {users: players});
+		console.log('-----------:\t', error, results, player);
+		next(null, {username: 'zhaoyier', userId: player.userId});
 	})
 };
 

@@ -17,6 +17,7 @@ module.exports = Team;
 function Team(teamId){
 	this.teamId = 0;
 	this.playerNum = 0;
+	this.playerUids = [];
 	this.playerArray = [];
 	this.teamStatus = 0;		//是否锁定
 	this.teamChannel = null;
@@ -92,10 +93,9 @@ Team.prototype.updateTeamInfo = function(){
 	}
 
 	if (Object.keys(userObjDict).length > 0) {
-		console.log('============updateTeamInfo:\t', userObjDict);
-		this.teamChannel.pushMessage('onUpdateTeam', userObjDict, null, function(error, res){
-			console.log('++++++++++++++:\t', error, res);
-		});
+		console.log('+++++++++++++++:\t', !!this.teamChannel, this.playerUids);
+		//this.teamChannel.pushMessage('onUpdateTeam', userObjDict);
+		this.teamChannel.pushMessageByUids('onUpdateTeam', userObjDict, this.playerUids);
 	}
 }
 
@@ -153,7 +153,8 @@ Team.prototype.createChannel = function(){
 	}
 
 	var channelName = channelUtil.getTeamChannelName(this.teamId);
-	this.teamChannel = pomelo.app.get('channelService').getChannel(channelName, true);
+	//this.teamChannel = pomelo.app.get('channelService').getChannel(channelName, true);
+	this.teamChannel = pomelo.app.get('channelService');
 	if (this.teamChannel){
 		return this.teamChannel;
 	}
@@ -172,9 +173,10 @@ Team.prototype.addPlayer2Channel = function(data){
 	}
 
 	if (data) {
-		console.log('===========addPlayer2Channel>>>>>:\t', data);
-		this.teamChannel.add(data.userId, data.serverId);
-		 return true;
+		//var res = this.teamChannel.add(data.userId, data.serverId);
+		this.playerUids.push({uid:data.userId, sid:data.serverId});
+		console.log('============>addPlayer2Channel:\t', this.playerUids);
+		return true;
 	}
 
 	return false;
