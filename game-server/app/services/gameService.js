@@ -21,7 +21,7 @@ var handler = GameService.prototype;
 
 /**
 * 进入游戏，记录玩家信息
-* @param: 
+* @param: {}
 */
 handler.enterGame = function(userId, data, callback){
 	if (!!userId && !!data && typeof(callback) === 'function'){
@@ -36,39 +36,47 @@ handler.enterGame = function(userId, data, callback){
 * 查询玩家基本信息
 * @param: 
 */
-handler.queryUserBasic = function(userId, callback){
-	var _user = this.uidMap[userId];
-	if (!!_user) {
-		callback(null, _user);
-	} else {
-		callback(201);
-	}
-}
+// handler.queryUserBasic = function(userId, callback){
+// 	var _user = this.uidMap[userId];
+// 	if (!!_user) {
+// 		callback(null, _user);
+// 	} else {
+// 		callback(201);
+// 	}
+// }
 
 /**
 * 创建房间
 * @param: 
 */
-handler.createTeam = function(userId, callback){
+handler.createTeam = function(userId, roomType){
 	var _teamObj = new Team(++teamId);
-	var status = _teamObj.addPlayer({userId: userId, serverId: this.queryUserServerId(userId)});
+	var _data = {};
+	queryUserRecord(this, userId, function(error, res){
+		if (!error) {
+			_data = underscore.extend({}, {userId: userId, roomType: roomType}, res);
+		} else {
+			_data = {userId: userId, serviceId: this.queryUserServerId(userId), roomType: roomType};
+		}
+
+		var _status = _teamObj.addPlayer(_data);
 	
-	console.log('===========createTeam:\t', status);
-	if (status === 200) {
-		this.teamMap[userId] = _teamObj.teamId;
-		this.teamObjMap[_teamObj.teamId] = _teamObj;
-		//callback(null, {teamId: _teamObj.teamId});
-		return _teamObj.teamId;
-	} else {
-		return 0;
-	}
+		if (_status === 200) {
+			this.teamMap[userId] = _teamObj.teamId;
+			this.teamObjMap[_teamObj.teamId] = _teamObj;
+			return _teamObj.teamId;
+		} else {
+			return 0;
+		}
+
+	})	
 }
 
 /**
 * 选择房间进入游戏
 * @param: 
 */
-handler.joinTeam = function(userId, callback){
+handler.joinTeam = function(userId, roomType, callback){
 	var _index = 0;
 	for (var index in this.teamObjMap){
 		if (this.teamObjMap[index].isTeamHasPosition()){
@@ -78,17 +86,23 @@ handler.joinTeam = function(userId, callback){
 
 	/*创建房间or加入房间*/
 	if (_index != 0) {
-		var _teamObj = this.teamObjMap[_index];
-		var status = _teamObj.addPlayer({userId: userId, serverId: this.queryUserServerId(userId)});
-		console.log('==============joinTeam:\t', status);
-		if (status === 200) {
-			callback(null, {teamId: _teamObj.teamId});
-		} else {
-			callback(201);
-		}
+		var _teamObj = this.teamObjMap[_index], _data = {};
+		queryUserRecord(this, userId, function(error, res){
+			if (!error) {
+				_data = underscore.extend({}, {userId: userId, roomType: roomType}, res);
+			} else {
+				_data = {userId: userId, serviceId: this.queryUserServerId(userId), roomType: roomType};
+			}
+
+			var _status = _teamObj.addPlayer({userId: userId, serverId: this.queryUserServerId(userId), roomType: roomType, });
+			if (_status === 200) {
+				callback(null, {teamId: _teamObj.teamId});
+			} else {
+				callback(201);
+			}			
+		})		
 	} else {
-		var _teamId = this.createTeam(userId);
-		console.log('==============>>>>>joinTeam:\t', _teamId);
+		var _teamId = this.createTeam(userId, roomType);
 		if (_teamId != 0) {
 			callback(null, {teamId: _teamId});
 		} else {
@@ -99,41 +113,39 @@ handler.joinTeam = function(userId, callback){
 }
 
 /**
-* 检查是否为队友
+* 查询队友信息
 * @param: 
 */
 
-handler.checkTeammate = function(userId, teammate){	
+handler.queryTeammateInfo = function(userId, teammate, callback){	
 	var _teamId = this.teamMap[userId];
-	if (!!_teamId){
+	if (!!_teamId) {
 		var _teamObj = this.teamObjMap[_teamId];
-		if (!!_teamObj && !!_teamObj.getTeammates()){
-			var _teammates = _teamObj.getTeammates();
-			for (var i=0; i<_teammates.length; ++i){
-				if (_teammates[i].userId === userId) {
-					return true;
-				}
-			}
+		if (!!_teamObj && !!_teamObj.getTeammatesBasic({userId: teammate})) {
+			callback(null, {});
 		}
+		callback(201);
+	} else {
+		callback(201);
 	}
-	return false;
+
 }
 
-handler.leave = function(uid){
-	var record = this.uidMap[uid];
+handler.leave = function(userId){
+	var record = this.uidMap[userId];
 	if (record && !!this.teamMap[record.teamId]){
-		delete this.uidMap[uid];
+		delete this.uidMap[userId];
 		for (var i=0; i<this.teamMap[record.teamId].length; ++i){
-			if (this.teamMap[record.teamId][i]['uid'] === uid){
+			if (this.teamMap[record.teamId][i]['uid'] === userId){
 				this.teamMap[record.teamId].splice(i, 1);
 			}		
 		}
 	} else {
-		log('leave', {uid: uid});
+		log('leave', {uid: userId});
 	}
 }
 
-handler.kick = function(uid, teamId){
+handler.kick = function(userId, teamId){
 	delete this.uidMap[uid];
 	if (!!this.teamMap[teamId]){
 		for (var i=0; i<this.teamMap[teamId].length; ++i){
@@ -142,7 +154,7 @@ handler.kick = function(uid, teamId){
 			}
 		}
 	} else {
-		log('kick', {uid: uid});
+		log('kick', {uid: userId});
 	}
 	return Code.Ok;
 }
@@ -161,15 +173,24 @@ handler.queryUserServerId = function(userId){
 }
 
 
-var checkDuplicate = function(service, uid, teamId) {
-	return !!service.uidMap[uid];
+var checkDuplicate = function(service, userId, teamId) {
+	return !!service.uidMap[userId];
 };
 
-var addUserRecord = function(service, uid, data){
-	service.uidMap[uid] = data;
+var addUserRecord = function(service, userId, data){
+	service.uidMap[userId] = data;
 }
 
-var addTeamRecord = function(service, uid, data){
+var queryUserRecord = function(service, userId, callback){
+	var _user = service.uidMap[userId];
+	if (!!_user) {
+		callback(null, _user);
+	} else {
+		callback(201);
+	}
+}
+
+var addTeamRecord = function(service, userId, data){
 
 }
 

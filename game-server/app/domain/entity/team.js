@@ -18,7 +18,7 @@ function Team(teamId){
 	this.teamId = 0;
 	this.playerNum = 0;
 	this.playerUids = [];
-	this.playerArray = [];
+	this.playerArray = {};
 	this.teamStatus = 0;		//是否锁定
 	this.teamChannel = null;
 	this.poker = [];
@@ -36,7 +36,7 @@ function Team(teamId){
 var handler = Team.prototype;
 
 Team.prototype.addPlayer = function(data){
-	if (!data || typeof data !== 'object' || !data.userId || !data.serverId){
+	if (!data || typeof data !== 'object' || !data.userId || !data.serviceId){
 		return Code.Team.DATA_ERR;
 	}
 
@@ -70,10 +70,13 @@ Team.prototype.addPlayer = function(data){
 }
 
 Team.prototype.doAddPlayer = function(teamObj, data){
-	var hand = logic.createHandCard(teamObj.poker);
+	var _hand = logic.createHandCard(teamObj.poker);
 	if (!!hand && typeof(hand) === 'object'){
-		var player = {userId: data.userId, serverId: data.serverId, hand: hand.cards, patterns: hand.pattern, status: Code.Card.BACK};
-		teamObj.playerArray.push(player);
+		//var player = {userId: data.userId, serverId: data.serverId, hand: _hand.cards, patterns: _hand.pattern, status: Code.Card.BACK, };
+		//teamObj.playerArray.push(player);
+		/*{username, vip, diamond, gold, serviceId}*/
+		teamObj.playerArray[data.userId] = {serviceId: data.serviceId, hand: _hand.cards, patterns: _hand.pattern, status: Code.Card.BACK, 
+			username: data.username, vip: data.vip, diamond: data.diamond, gold};
 		return true;
 	} else {
 		return false;
@@ -103,13 +106,19 @@ Team.prototype.getTeammatesBasic = function(data){
 	if (!data || typeof(data) != 'object') {
 		return null;
 	} else {
-		var _teammatesBasic = {}, _teammates = this.playerArray;
-		for (var i=0; i<_teammates.length; ++i) {
-			if (_teammates[i].userId != 0 && _teammates[i].userId != data.userId) {
-				_teammatesBasic[_teammates[i].userId] = {status: _teammates[i].status};
-			}
+		var _player = this.playerArray[data.userId];
+		if (!!_player) {
+			return _player;
+		} else {
+			return null;
 		}
-		return _teammatesBasic;
+		//var _teammatesBasic = {}, _teammates = this.playerArray;
+		// for (var i=0; i<_teammates.length; ++i) {
+		// 	if (_teammates[i].userId != 0 && _teammates[i].userId != data.userId) {
+		// 		_teammatesBasic[_teammates[i].userId] = {status: _teammates[i].status};
+		// 	}
+		// }
+		// return _teammatesBasic;
 	}
 }
 
@@ -135,14 +144,19 @@ Team.prototype.isTeamHasPosition = function() {
 };
 
 Team.prototype.isPlayerInTeam = function(userId){
-	var users = this.playerArray;
-	for (var i in users) {
-		if (users[i].userId != 0 && users[i].userId === userId) {
-			return true;
-		}
+	var _player = this.playerArray[userId];
+	if (!!_player) {
+		return true;
+	} else {
+		return false;
 	}
+	// for (var i in users) {
+	// 	if (users[i].userId != 0 && users[i].userId === userId) {
+	// 		return true;
+	// 	}
+	// }
 
-	return false;
+	//return false;
 }
 
 
@@ -174,7 +188,7 @@ Team.prototype.addPlayer2Channel = function(data){
 
 	if (data) {
 		//var res = this.teamChannel.add(data.userId, data.serverId);
-		this.playerUids.push({uid:data.userId, sid:data.serverId});
+		this.playerUids.push({uid:data.userId, sid:data.serviceId});
 		console.log('============>addPlayer2Channel:\t', this.playerUids);
 		return true;
 	}
@@ -237,10 +251,6 @@ Team.prototype.pushTeamMsg2All = function(data){
 	this.teamChannel.pushMessage('onTeamMsg', data, null);
 	return true;
 }
-
-//Team.prototype.getTeammatesBasic = function(data){
-	
-//}
 
 function getAllTeammatesBasic(teammates){
 	var _teammatersIDS = [];
