@@ -1,9 +1,11 @@
 var underscore = require('underscore');
 
-var Code = require('../../../shared/code');
 var Team = require('../domain/entity/team');
-var Error = require('../consts/code');
+var Code = require('../consts/code');
+var Const = require('../consts/consts');
 var dispatcher = require('../util/dispatcher');
+
+var userDao = require('../dao/userDao');
 //var logger = require('pomelo-logger').getLogger('gameservice', __filename);
 
 var GameService = function(app) {
@@ -109,26 +111,48 @@ handler.joinTeam = function(userId, roomType, callback){
 			callback(201);
 		}
 	}
-
 }
 
 /**
 * 查询队友信息
 * @param: 
 */
-
 handler.queryTeammateInfo = function(userId, teammate, callback){	
-	var _teamId = this.teamMap[userId];
-	if (!!_teamId) {
-		var _teamObj = this.teamObjMap[_teamId];
-		if (!!_teamObj && !!_teamObj.getTeammatesBasic({userId: teammate})) {
-			callback(null, {});
-		}
-		callback(201);
+	var _teamObj = queryUserTeamObj(this, userId);
+	if (!!_teamObj && !!_teamObj.getTeammatesBasic({userId: teammate})) {
+		callback(null, {});
 	} else {
 		callback(201);
 	}
+}
 
+/**
+* 
+* @param: userId, amount
+*/
+handler.bet = function(userId, amount callback) {
+	var _teamObj = queryUserTeamObj(this, userId);
+	if (_teamObj != null) {
+		queryUserRecord(this, userId, function(error, player){
+			if (!error && player.gold > amount) {
+				updateUserAccount(this, Const.Account.BET_GOLD, userId, amount, function(error, res) {
+					if (!error) {
+						/*{type, userId, amount}*/
+						_teamObj.pushTeamMsg2All({Const.Account.BET_GOLD, userId, amount});
+						return callback(null, res);
+					} else {
+						return callback(201)
+					}
+				})
+			else if (!error) {
+				return callback(201);
+			} else {
+				return callback(201);
+			}
+		})
+	} else {
+		return callback(201);
+	}	
 }
 
 handler.leave = function(userId){
@@ -190,8 +214,40 @@ var queryUserRecord = function(service, userId, callback){
 	}
 }
 
+var updateUserAccount = function(service, type, userId, amount, callback){
+	var _user = service.uidMap[userId];
+	if (!!_user) {
+		if (type === Const.Account.BET_GOLD) {
+			userDao.consumeAccountGold(userId, amount, function(error, res) {
+				if (res.code === 200) {
+					service.uidMap[userId]['gold'] -= amount;
+					callback(null, service.uidMap[userId]['gold']);
+				} else {
+					callback(201);
+				}
+			})
+		}
+	} else {
+		callback(201);
+	}
+}
+
 var addTeamRecord = function(service, userId, data){
 
+}
+
+var queryUserTeamObj = function(service, userId) {
+	var _teamId = this.teamMap[userId];
+	if (!!_teamId) {
+		var _teamObj = this.teamObjMap[_teamId];
+		if (!!_teamObj) {
+			return _teamObj;
+		} else {
+			return null;
+		}
+	} else {
+		return null;
+	}
 }
 
 var log = function(fun, msg){

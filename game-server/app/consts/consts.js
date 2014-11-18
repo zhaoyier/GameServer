@@ -25,6 +25,10 @@ module.exports = {
 	XXRefer: {
 		REFER_HEX:16
 	},
+	Account: {
+		BET_GOLD: 1,
+		ADD_GOLD: 2
+	}
 	XXConstant: {
 		UNKNOWN_ERROR: -1,
 		WIN: 0,

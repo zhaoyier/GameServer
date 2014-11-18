@@ -15,7 +15,9 @@ module.exports = {
 		FA_UNKNOWN_CONNECTOR: 1201
 	},
     Account: {
-        INSUFFICIENT_BALANCE: 1301
+        GOLD_INSUFFICIENT: 1301,
+        DIAMOND_INSUFFICIENT: 1302,
+        INSUFFICIENT_BALANCE: 1303
     },
     Team: {
         DATA_ERR:1401,
@@ -25,6 +27,6 @@ module.exports = {
     },
 	Card: {
 		BACK: 0
-	}
+	},
 	
 }

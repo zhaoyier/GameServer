@@ -107,7 +107,20 @@ handler.queryTeammateInfo = function(msg, session, next){
 *@param: 
 */
 handler.bet = function(msg, session, next){
-	 
+	var _userId = session.get('playerId');
+    var _gameService = this.gameService;
+
+    if (!!_userId && typeof(_userId)==='number' && !!msg.amount && typeof(msg.amount) === 'number') {
+        _gameService.bet(_userId, msg.amount, function(error, res){
+           if (!error) {
+                next(null, {code: 200, balance: res});
+            } else {
+                next(null, {code: 201});
+            } 
+        })    
+    } else {
+        next(null, {code: 201});
+    }    
 }
 
 /**

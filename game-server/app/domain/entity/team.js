@@ -2,6 +2,7 @@
 * 队伍信息直接在这里发送
 */
 var pomelo = require('pomelo');
+var later = require('later');
 
 var logic = require('../logic/xxLogic');
 var poker = require('../config/poker');
@@ -22,6 +23,7 @@ function Team(teamId){
 	this.teamStatus = 0;		//是否锁定
 	this.teamChannel = null;
 	this.poker = [];
+	this.isStart = false;
 
 	var _this = this;
 	var init = function() {
@@ -72,10 +74,8 @@ Team.prototype.addPlayer = function(data){
 Team.prototype.doAddPlayer = function(teamObj, data){
 	var _hand = logic.createHandCard(teamObj.poker);
 	if (!!hand && typeof(hand) === 'object'){
-		//var player = {userId: data.userId, serverId: data.serverId, hand: _hand.cards, patterns: _hand.pattern, status: Code.Card.BACK, };
-		//teamObj.playerArray.push(player);
 		/*{username, vip, diamond, gold, serviceId}*/
-		teamObj.playerArray[data.userId] = {serviceId: data.serviceId, hand: _hand.cards, patterns: _hand.pattern, status: Code.Card.BACK, 
+		teamObj.playerArray[data.userId] = {serviceId: data.serviceId, hand: _hand.cards, pattern: _hand.pattern, status: Code.Card.BACK, 
 			username: data.username, vip: data.vip, diamond: data.diamond, gold};
 		return true;
 	} else {
@@ -96,9 +96,13 @@ Team.prototype.updateTeamInfo = function(){
 	}
 
 	if (Object.keys(userObjDict).length > 0) {
-		console.log('+++++++++++++++:\t', !!this.teamChannel, this.playerUids);
 		//this.teamChannel.pushMessage('onUpdateTeam', userObjDict);
 		this.teamChannel.pushMessageByUids('onUpdateTeam', userObjDict, this.playerUids);
+		if (this.playerNum >= 2 && this.isStart === false) {
+			setTimeout(function(){
+				this.startGame();
+			}, 1000);
+		}
 	}
 }
 
@@ -112,14 +116,31 @@ Team.prototype.getTeammatesBasic = function(data){
 		} else {
 			return null;
 		}
-		//var _teammatesBasic = {}, _teammates = this.playerArray;
-		// for (var i=0; i<_teammates.length; ++i) {
-		// 	if (_teammates[i].userId != 0 && _teammates[i].userId != data.userId) {
-		// 		_teammatesBasic[_teammates[i].userId] = {status: _teammates[i].status};
-		// 	}
-		// }
-		// return _teammatesBasic;
 	}
+}
+
+Team.prototype.startGame = function(this){
+	if (this.playerNum > 2 && this.isStart === false) {
+		var _sched = later.parse.recur().every(3).second();
+		var _timeObj = later.setInterval(function(){
+			this.startGame = true;
+			this.teamChannel.pushMessage('onStartGame', {});
+			_timeObj.clear();
+		}, _sched);
+	}
+}
+
+Team.prototype.restartGame = function() {
+	this.isStart = false;
+	this.poker = poker.getXXPoker();
+	for (var i in this.playerArray) {
+		var _hand = logic.createHandCard(this.poker);
+		this.playerArray[i]['hand'] = _hand.cards;
+		this.playerArray[i]['pattern'] = _hand.pattern;
+	}
+	setTimeout(function(){
+		this.startGame();
+	}, 1000);
 }
 
 Team.prototype.getTeammateHand = function(data){
@@ -150,13 +171,6 @@ Team.prototype.isPlayerInTeam = function(userId){
 	} else {
 		return false;
 	}
-	// for (var i in users) {
-	// 	if (users[i].userId != 0 && users[i].userId === userId) {
-	// 		return true;
-	// 	}
-	// }
-
-	//return false;
 }
 
 
@@ -189,7 +203,6 @@ Team.prototype.addPlayer2Channel = function(data){
 	if (data) {
 		//var res = this.teamChannel.add(data.userId, data.serverId);
 		this.playerUids.push({uid:data.userId, sid:data.serviceId});
-		console.log('============>addPlayer2Channel:\t', this.playerUids);
 		return true;
 	}
 
@@ -225,7 +238,7 @@ Team.prototype.pushLeaveMsg2All = function(userId){
 	}
 
 	var msg = {userId: userId};
-	this.teamChannel.pushMessage('onTeammateLeave', msg, function(error, _){
+	this.teamChannel.pushMessage('onTeammateLeave', msg, function(error, res){
 		cb(null, ret);
 	})
 }
@@ -243,12 +256,23 @@ Team.prototype.pushChatMsg2All = function(data){
 	this.teamChannel.pushMessage('onChat', data, null);
 }
 
+/**
+* 
+* @param: {type, userId, amount}
+*/
 Team.prototype.pushTeamMsg2All = function(data){
 	if (!this.teamChannel) {
 		return false;
 	}
 
-	this.teamChannel.pushMessage('onTeamMsg', data, null);
+	var _param = {type: data.type, userId: data.userId, amount: data.amount};
+	// if (data.type === ) {
+
+	// } else if (data.type === ) {
+
+	// } else if ()
+
+	this.teamChannel.pushMessage('onTeamMsg', _param, null);
 	return true;
 }
 
