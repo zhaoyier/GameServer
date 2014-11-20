@@ -26,13 +26,14 @@ module.exports = {
 		REFER_HEX:16
 	},
 	Account: {
-		BET_GOLD: 1,
-		ADD_GOLD: 2
+		ADD_GOLD: 1,
+		BET_GOLD: 2,
+		EXCHANGE_GOLD: 3
 	}
 	XXConstant: {
 		UNKNOWN_ERROR: -1,
-		WIN: 0,
-		LOSE: 1,
+		WIN: 1,
+		LOSE: 0,
 		OK: 1,
 		MIN_PLAYER_NUM:2,
 		HAND_CARDS_NUM:3,
@@ -52,6 +53,16 @@ module.exports = {
 		XX_SHUNJIN: 5,
 		XX_BAOZI: 6,
 		XX_TESHU:7
+	},
+	TeamMsg: {
+		BACK_BET: 1,
+		CHECK_BET: 2,
+		RAISE_GOLD: 2,
+		CHECK_HAND: 3,
+		ABANDON_HAND: 4,
+		COMPARE_HAND: 5
+
+
 	}
 
 }

@@ -35,43 +35,29 @@ handler.enterGame = function(userId, data, callback){
 }
 
 /**
-* 查询玩家基本信息
-* @param: 
-*/
-// handler.queryUserBasic = function(userId, callback){
-// 	var _user = this.uidMap[userId];
-// 	if (!!_user) {
-// 		callback(null, _user);
-// 	} else {
-// 		callback(201);
-// 	}
-// }
-
-/**
 * 创建房间
 * @param: 
 */
 handler.createTeam = function(userId, roomType){
 	var _teamObj = new Team(++teamId);
 	var _data = {};
-	queryUserRecord(this, userId, function(error, res){
-		if (!error) {
-			_data = underscore.extend({}, {userId: userId, roomType: roomType}, res);
-		} else {
-			_data = {userId: userId, serviceId: this.queryUserServerId(userId), roomType: roomType};
-		}
 
-		var _status = _teamObj.addPlayer(_data);
+	var _user = queryUserRecord(this, userId);
+	if (!!_player) {
+		_data = underscore.extend({}, {userId: userId, roomType: roomType}, _player);
+	} else {
+		_data = {userId: userId, serviceId: this.queryUserServerId(userId), roomType: roomType};
+	}
+
+	var _status = _teamObj.onAddPlayer(_data);
 	
-		if (_status === 200) {
-			this.teamMap[userId] = _teamObj.teamId;
-			this.teamObjMap[_teamObj.teamId] = _teamObj;
-			return _teamObj.teamId;
-		} else {
-			return 0;
-		}
-
-	})	
+	if (_status === 200) {
+		this.teamMap[userId] = _teamObj.teamId;
+		this.teamObjMap[_teamObj.teamId] = _teamObj;
+		return _teamObj.teamId;
+	} else {
+		return 0;
+	}
 }
 
 /**
@@ -89,20 +75,19 @@ handler.joinTeam = function(userId, roomType, callback){
 	/*创建房间or加入房间*/
 	if (_index != 0) {
 		var _teamObj = this.teamObjMap[_index], _data = {};
-		queryUserRecord(this, userId, function(error, res){
-			if (!error) {
-				_data = underscore.extend({}, {userId: userId, roomType: roomType}, res);
-			} else {
-				_data = {userId: userId, serviceId: this.queryUserServerId(userId), roomType: roomType};
-			}
+		var _player = queryUserRecord(this, userId);
+		if (!!_player) {
+			_data = underscore.extend({}, {userId: userId, roomType: roomType}, _player);
+		} else {
+			_data = {userId: userId, serviceId: this.queryUserServerId(userId), roomType: roomType};
+		}
 
-			var _status = _teamObj.addPlayer({userId: userId, serverId: this.queryUserServerId(userId), roomType: roomType, });
-			if (_status === 200) {
-				callback(null, {teamId: _teamObj.teamId});
-			} else {
-				callback(201);
-			}			
-		})		
+		var _status = _teamObj.onAddPlayer({userId: userId, serverId: this.queryUserServerId(userId), roomType: roomType, });
+		if (_status === 200) {
+			return callback(null, {teamId: _teamObj.teamId});
+		} else {
+			return callback(201);
+		}		
 	} else {
 		var _teamId = this.createTeam(userId, roomType);
 		if (_teamId != 0) {
@@ -111,6 +96,29 @@ handler.joinTeam = function(userId, roomType, callback){
 			callback(201);
 		}
 	}
+}
+
+/**
+* leave team
+* @param: 
+*/
+handler.leaveTeam = function(userId, callback) {
+	var _teamObj = queryUserTeamObj(this, userId);
+	if (!!_teamObj) {
+		var _teamId = _teamObj.teamId;
+		delete this.uidMap[userId];
+		delete this.teamMap[userId];
+		delete this.teamObjMap[_teamId];
+		var _status = _teamObj.onRemovePlayer({userId: userId, serviceId: this.queryUserServerId(userId)});
+		if (_status === 200) {
+			return callback(null, 'ok');
+		} else {
+			return callback(201);
+		}		
+	} else {
+		return callback(201);
+	}
+
 }
 
 /**
@@ -130,105 +138,107 @@ handler.queryTeammateInfo = function(userId, teammate, callback){
 * 
 * @param: userId, amount
 */
-handler.bet = function(userId, amount callback) {
+handler.bet = function(userId, amount, type, callback) {
 	var _teamObj = queryUserTeamObj(this, userId);
-	if (_teamObj != null) {
-		queryUserRecord(this, userId, function(error, player){
-			if (!error && player.gold > amount) {
-				updateUserAccount(this, Const.Account.BET_GOLD, userId, amount, function(error, res) {
-					if (!error) {
-						/*{type, userId, amount}*/
-						_teamObj.pushTeamMsg2All({Const.Account.BET_GOLD, userId, amount});
-						return callback(null, res);
-					} else {
-						return callback(201)
-					}
-				})
-			else if (!error) {
-				return callback(201);
+	var _player = queryUserRecord(this, userId);
+	if (!_teamObj || !_player) {
+		return callback(201);
+	}
+
+	if (_player.gold < amount) {
+		return callback(201);
+	}
+
+	updateUserAccount(this, type, userId, amount, function(error, res){
+		if (!error) {
+			var _ret = _teamObj.onBet({userId: userId, amount: amount, type: type});
+			if (!!_ret) {
+				return callback(null, 'ok');
 			} else {
 				return callback(201);
 			}
-		})
+		} else {
+			return callback(201);
+		}
+	})
+}
+
+/**
+* 
+* @param: 
+*/
+handler.checkHand = function(userId, callback){
+	var _teamObj = queryUserTeamObj(this, userId);
+	if (!!_teamObj) {
+		var _hand = _teamObj.onCheckSelfHand(userId, callback);
+		if (!!_hand) {
+			return callback(null, _hand);
+		} else {
+			return callback(201)
+		}
 	} else {
 		return callback(201);
-	}	
-}
-
-handler.leave = function(userId){
-	var record = this.uidMap[userId];
-	if (record && !!this.teamMap[record.teamId]){
-		delete this.uidMap[userId];
-		for (var i=0; i<this.teamMap[record.teamId].length; ++i){
-			if (this.teamMap[record.teamId][i]['uid'] === userId){
-				this.teamMap[record.teamId].splice(i, 1);
-			}		
-		}
-	} else {
-		log('leave', {uid: userId});
 	}
 }
 
-handler.kick = function(userId, teamId){
-	delete this.uidMap[uid];
-	if (!!this.teamMap[teamId]){
-		for (var i=0; i<this.teamMap[teamId].length; ++i){
-			if (this.teamMap[teamId][i]['uid'] === uid){
-				this.teamMap[teamId].splice(i, 1);
-			}
-		}
-	} else {
-		log('kick', {uid: userId});
+/**
+* 
+* @param: 
+*/
+handler.compareHand = function(userId, teammate, callback){
+	var _teamObj = queryUserTeamObj(this, userId);
+	if (!_teamObj) {
+		return callback(201);
+	} 
+
+	if (!_teamObj.getTeammatesBasic({userId: teammate})){
+		return callback(202);
 	}
-	return Code.Ok;
+
+	var _ret = _teamObj.onCompareHand({userId: userId, teammate: teammate});
+	if (_ret != null) {
+		return callback(null, {win: 1});
+	} else {
+		return callback(null, {win: 0});
+	}
 }
 
-
-handler.pushMessageToPlayer = function(){
-	
-}
-
-handler.pushMessageToTeam = function(fun, teamId){
-	
-}
 
 handler.queryUserServerId = function(userId){
 	return getServerIdByUserId(userId, this.app);
 }
 
-
-var checkDuplicate = function(service, userId, teamId) {
-	return !!service.uidMap[userId];
-};
-
 var addUserRecord = function(service, userId, data){
 	service.uidMap[userId] = data;
 }
 
-var queryUserRecord = function(service, userId, callback){
+var queryUserRecord = function(service, userId){
 	var _user = service.uidMap[userId];
 	if (!!_user) {
 		callback(null, _user);
+		return _user;
 	} else {
-		callback(201);
+		return null;
 	}
 }
 
 var updateUserAccount = function(service, type, userId, amount, callback){
-	var _user = service.uidMap[userId];
-	if (!!_user) {
+	var _player = service.uidMap[userId];
+	if (!!_player) {
 		if (type === Const.Account.BET_GOLD) {
 			userDao.consumeAccountGold(userId, amount, function(error, res) {
 				if (res.code === 200) {
 					service.uidMap[userId]['gold'] -= amount;
-					callback(null, service.uidMap[userId]['gold']);
+					return callback(null, service.uidMap[userId]['gold']);
 				} else {
-					callback(201);
+					return callback(201);
 				}
 			})
+		} else {
+			return callback(201);
 		}
 	} else {
-		callback(201);
+		return callback(201);
 	}
 }
 

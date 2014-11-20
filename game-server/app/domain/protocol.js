@@ -1,3 +1,6 @@
+/*function*/
+
+
 TeamInfo:{
 	var teamID = 0;
 	var playerNum = 0;

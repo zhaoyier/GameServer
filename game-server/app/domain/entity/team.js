@@ -4,12 +4,18 @@
 var pomelo = require('pomelo');
 var later = require('later');
 
-var logic = require('../logic/xxLogic');
+
 var poker = require('../config/poker');
+var Logic = require('../logic/xxLogic');
 var channelUtil = require('../../util/channelUtil');
 
 var Consts = require('../../consts/consts');
 var Code = require('../../consts/code');
+
+/*
+* @function: onTeamMsg
+*
+*/
 
 var MAX_MEMBER_NUM = 5
 
@@ -19,6 +25,7 @@ function Team(teamId){
 	this.teamId = 0;
 	this.playerNum = 0;
 	this.playerUids = [];
+	this.playerSerial = {};
 	this.playerArray = {};
 	this.teamStatus = 0;		//是否锁定
 	this.teamChannel = null;
@@ -37,8 +44,13 @@ function Team(teamId){
 
 var handler = Team.prototype;
 
-Team.prototype.addPlayer = function(data){
-	if (!data || typeof data !== 'object' || !data.userId || !data.serviceId){
+
+/**
+* 
+* @param: 
+*/
+Team.prototype.onAddPlayer = function(data){
+	if (!data || !data.userId || !data.serviceId){
 		return Code.Team.DATA_ERR;
 	}
 
@@ -66,24 +78,110 @@ Team.prototype.addPlayer = function(data){
 		this.playerNum++;
 	}
 
-	this.updateTeamInfo();
+	this.doUpdateTeamInfo();
 
 	return Code.OK;
 }
 
+/**
+* 
+* @param: 
+*/
+Team.prototype.onRemovePlayer = function(data) {
+	if (!data || !data.userId || !data.serviceId) {
+		return 201;
+	}
+
+	var _player = this.playerArray[data.userId];
+	if (!!_player) {
+		if (this.playerNum >= 1) {
+			this.playerNum--;
+		} else {
+			this.playerNum = 0;
+		}
+
+		pushLeaveMsg2All(data.userId, data.serviceId);
+
+		delete this.playerArray[data.userId];
+
+	} else {
+		return 201;
+	}
+}
+
+/**
+* 
+* @param: {userId}
+*/
+Team.prototype.onCheckSelfHand = function(data) {
+	if (!data || !data.userId) {
+		return null;
+	}
+
+	var _player = this.playerArray[data.userId];
+	if (!!_player) {
+		_player['status'] = Code.Card.BACK;
+		this.pushTeamMsg2All(Const.TeamMsg.CHECK_HAND, data.userId, 0);
+		return {hand: _player.hand, pattern: _player.pattern};
+	} else {
+		return null;
+	}
+}
+
+/**
+*
+* @param: {userId, amount}
+*/
+Team.prototype.onBet = function(data) {
+	if (!data || !data.userId) {
+		return false;
+	}
+
+	var _player = this.playerArray[data.userId];
+	if (!!_player) {
+		if (_player.status != Code.Code.ABANDON) {
+			var _status = (!!_player.status) ? Const.TeamMsg.CHECK_BET : Const.TeamMsg.BACK_BET;
+			this.pushTeamMsg2All(_status, data.userId, data.amount);
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/**
+*
+* @param: 
+*/
+Team.prototype.onCompareHand = function(data){
+	var _self = this.playerArray[data.userId];
+	var _teammate = this.playerArray[data.teammate];
+	if (!!_self && !!_teammate) {
+		var _ret = Logic.getCompareSize({cards: _self.hand, pattern: _self.pattern}, {cards: _teammate.hand, pattern: _teammate.pattern}, true);
+		this.pushTeamMsg2All(Const.TeamMsg.COMPARE_HAND, data.userId, {data.teammate, win: (!!_ret ? 1: 0)});
+		return !!_ret ? false : true;
+	} else {
+		return null;
+	}		
+}
+
+/**
+*
+* @param: 
+*/
 Team.prototype.doAddPlayer = function(teamObj, data){
-	var _hand = logic.createHandCard(teamObj.poker);
+	var _hand = Logic.createHandCard(teamObj.poker);
 	if (!!hand && typeof(hand) === 'object'){
 		/*{username, vip, diamond, gold, serviceId}*/
 		teamObj.playerArray[data.userId] = {serviceId: data.serviceId, hand: _hand.cards, pattern: _hand.pattern, status: Code.Card.BACK, 
-			username: data.username, vip: data.vip, diamond: data.diamond, gold};
+			username: data.username, vip: data.vip, diamond: data.diamond, gold: data.gold};
 		return true;
 	} else {
 		return false;
 	}
 }
 
-Team.prototype.updateTeamInfo = function(){
+Team.prototype.doUpdateTeamInfo = function(){
 	var userObjDict = {};
 	var users = this.playerArray;
 	for (var i in users){
@@ -105,6 +203,20 @@ Team.prototype.updateTeamInfo = function(){
 		}
 	}
 }
+
+/**
+* 
+* @param:
+*/
+Team.prototype.compareHand = function(data) {
+
+}
+
+/**
+* 
+* @param: 
+*/
+Team.prototype.
 
 Team.prototype.getTeammatesBasic = function(data){
 	if (!data || typeof(data) != 'object') {
@@ -134,7 +246,7 @@ Team.prototype.restartGame = function() {
 	this.isStart = false;
 	this.poker = poker.getXXPoker();
 	for (var i in this.playerArray) {
-		var _hand = logic.createHandCard(this.poker);
+		var _hand = Logic.createHandCard(this.poker);
 		this.playerArray[i]['hand'] = _hand.cards;
 		this.playerArray[i]['pattern'] = _hand.pattern;
 	}
@@ -173,8 +285,6 @@ Team.prototype.isPlayerInTeam = function(userId){
 	}
 }
 
-
-
 Team.prototype.createChannel = function(){
 	if (this.teamChannel) {
 		return this.teamChannel;
@@ -192,7 +302,7 @@ Team.prototype.createChannel = function(){
 
 
 /**
-* @param: {userId, serverId}
+* @param: {userId, serviceId}
 *
 */
 Team.prototype.addPlayer2Channel = function(data){
@@ -201,7 +311,7 @@ Team.prototype.addPlayer2Channel = function(data){
 	}
 
 	if (data) {
-		//var res = this.teamChannel.add(data.userId, data.serverId);
+		//var res = this.teamChannel.add(data.userId, data.serviceId);
 		this.playerUids.push({uid:data.userId, sid:data.serviceId});
 		return true;
 	}
@@ -211,35 +321,39 @@ Team.prototype.addPlayer2Channel = function(data){
 
 /**
 * 
-* @param: {userId, serverId}
+* @param: {userId, serviceId}
 * 
 */
-Team.prototype.removePlayerFromChannel = function(data){
+/*Team.prototype.removePlayerFromChannel = function(data){
 	if (!this.teamChannel){
 		return false;
 	}
 
 	if (data) {
-		this.teamChannel.leave(data.userId, data.serverId);
+		this.teamChannel.leave(data.userId, data.serviceId);
 		return true;
 	}
 	return false;
-}
+}*/
 
 /**
 * 
-* @param: {userId, serverId}
+* @param: {userId, serviceId}
 * 
 */
-Team.prototype.pushLeaveMsg2All = function(userId){
-	var ret = {result: Code.OK};
-	if (!this.teamChannel){
-		cb(null, ret);
+Team.prototype.pushLeaveMsg2All = function(userId, serviceId){
+	if (!userId || !serviceId) {
+		return false;
 	}
 
-	var msg = {userId: userId};
-	this.teamChannel.pushMessage('onTeammateLeave', msg, function(error, res){
-		cb(null, ret);
+	if (!this.teamChannel){
+		return false;
+	}
+
+	var _param = {userId: userId};
+	this.teamChannel.pushMessage('onTeammateLeave', _param, function(error, res){
+		this.teamChannel.leave(userId, serviceId);
+		return true;
 	})
 }
 
@@ -260,17 +374,17 @@ Team.prototype.pushChatMsg2All = function(data){
 * 
 * @param: {type, userId, amount}
 */
-Team.prototype.pushTeamMsg2All = function(data){
+Team.prototype.pushTeamMsg2All = function(type, userId, amount){
 	if (!this.teamChannel) {
 		return false;
 	}
 
-	var _param = {type: data.type, userId: data.userId, amount: data.amount};
-	// if (data.type === ) {
+	var _param = {type: type, userId: userId, amount: amount};
+	 if (data.type === Const.TeamMsg.COMPARE_HAND) {
 
-	// } else if (data.type === ) {
-
-	// } else if ()
+	 } else {
+	 	_param = {type: type, userId:}
+	 }
 
 	this.teamChannel.pushMessage('onTeamMsg', _param, null);
 	return true;
@@ -303,5 +417,18 @@ function getTeammateStatus(userId, teammates){
 	}
 
 	return null;
+}
+
+function getPlayerSerial(playerSerial){
+	if (!playerSerial || playerSerial.length >= MAX_MEMBER_NUM){
+		return MAX_MEMBER_NUM;
+	}
+
+	for (var i=0; i<MAX_MEMBER_NUM; ++i) {
+		var _player = playerSerial[i];
+		if (!_player) {
+			return i;
+		}
+	}
 }
 

@@ -26,7 +26,9 @@ module.exports = {
         SYS_ERROR: 1404
     },
 	Card: {
-		BACK: 0
+		BACK: 0,
+        CHECK: 1,
+        ABANDON: 2
 	},
 	
 }

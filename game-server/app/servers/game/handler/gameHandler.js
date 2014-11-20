@@ -74,14 +74,32 @@ handler.enter = function(msg, session, next){
 * 进入房间
 *@param: 
 */
-handler.joinGame = function(msg, session, next){
+handler.joinTeam = function(msg, session, next){
+    var _userId = session.get('playerId');
     var _gameService = this.gameService;
 
-    _gameService.joinTeam(msg.userId, msg.roomType, function(error, res){
+    _gameService.joinTeam(_userId, msg.roomType, function(error, res){
         if (!error) {
             next(null, {code: 200, teamId: res.teamId})
         } else {
             next(null, {code: 201});
+        }
+    })
+}
+
+/**
+* 退出房间
+* @param:
+*/
+handler.leaveTeam = function(msg, session, next){
+    var _userId = session.get('playerId');
+    var _gameService = this.gameService;
+
+    _gameService.leaveTeam(_userId, function(error, res){
+        if (!error) {
+            next (null, {code: 200});
+        } else {
+            next(null, {code: 200});
         }
     })
 }
@@ -104,14 +122,14 @@ handler.queryTeammateInfo = function(msg, session, next){
 
 /**
 *
-*@param: 
+* @param: 
 */
 handler.bet = function(msg, session, next){
 	var _userId = session.get('playerId');
     var _gameService = this.gameService;
 
-    if (!!_userId && typeof(_userId)==='number' && !!msg.amount && typeof(msg.amount) === 'number') {
-        _gameService.bet(_userId, msg.amount, function(error, res){
+    if (!!_userId && !!msg.amount && !!msg.type) {
+        _gameService.bet(_userId, msg.amount, msg.type, function(error, res){
            if (!error) {
                 next(null, {code: 200, balance: res});
             } else {
@@ -125,18 +143,23 @@ handler.bet = function(msg, session, next){
 
 /**
 *
-*@param: 
+* @param: 
 */
 handler.check = function(msg, session, next){
+    var _userId = session.get('playerId');
+    var _gameService = this.gameService;
 
-}
-
-/**
-*
-*@param: 
-*/
-handler.addBet = function(msg, session, next){
-
+    if (!!_userId) {
+        _gameService.checkHand(_userId, function(error, res){
+            if (!error) {
+                next(null, {code: 200, {hand: res.hand, pattern: hand.pattern}});
+            } else {
+                next(null, {code: 201});
+            }
+        })
+    } else {
+        next(null, {code: 201});
+    }
 }
 
 /**
@@ -144,7 +167,24 @@ handler.addBet = function(msg, session, next){
 *@param: 
 */
 handler.compare = function(msg, session, next){
+    var _userId = session.get('playerId');
+    var _gameService = this.gameService;
 
+    if (!msg.teammate) {
+        return next(null, {code: 201});
+    }
+
+    if (!!_userId) {
+        _gameService.compareHand(_userId, msg.teammate, function(error, res){
+            if (!error) {
+                return next(null, {code: 200, win: res.win});
+            } else {
+                return next (null, {code: 200});
+            }
+        })
+    } else {
+        return next(null, {code: 201});
+    }
 
 }
 
