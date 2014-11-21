@@ -74,7 +74,7 @@ handler.enter = function(msg, session, next){
 * 进入房间
 *@param: 
 */
-handler.joinTeam = function(msg, session, next){
+handler.joinGame = function(msg, session, next){
     var _userId = session.get('playerId');
     var _gameService = this.gameService;
 
@@ -152,7 +152,7 @@ handler.check = function(msg, session, next){
     if (!!_userId) {
         _gameService.checkHand(_userId, function(error, res){
             if (!error) {
-                next(null, {code: 200, {hand: res.hand, pattern: hand.pattern}});
+                next(null, {code: 200, hand: res.hand, pattern: hand.pattern});
             } else {
                 next(null, {code: 201});
             }

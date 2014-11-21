@@ -50,6 +50,7 @@ var handler = Team.prototype;
 * @param: 
 */
 Team.prototype.onAddPlayer = function(data){
+	console.log('+++++++++++++>>>', data, !data, !data.userId, !data.serviceId)	
 	if (!data || !data.userId || !data.serviceId){
 		return Code.Team.DATA_ERR;
 	}
@@ -158,7 +159,7 @@ Team.prototype.onCompareHand = function(data){
 	var _teammate = this.playerArray[data.teammate];
 	if (!!_self && !!_teammate) {
 		var _ret = Logic.getCompareSize({cards: _self.hand, pattern: _self.pattern}, {cards: _teammate.hand, pattern: _teammate.pattern}, true);
-		this.pushTeamMsg2All(Const.TeamMsg.COMPARE_HAND, data.userId, {data.teammate, win: (!!_ret ? 1: 0)});
+		this.pushTeamMsg2All(Const.TeamMsg.COMPARE_HAND, data.userId, {userId:data.teammate, win: (!!_ret ? 1: 0)});
 		return !!_ret ? false : true;
 	} else {
 		return null;
@@ -171,7 +172,8 @@ Team.prototype.onCompareHand = function(data){
 */
 Team.prototype.doAddPlayer = function(teamObj, data){
 	var _hand = Logic.createHandCard(teamObj.poker);
-	if (!!hand && typeof(hand) === 'object'){
+	if (!!_hand && typeof(_hand) === 'object'){
+		console.log('hand11--------->>', _hand, !!_hand, typeof(_hand));
 		/*{username, vip, diamond, gold, serviceId}*/
 		teamObj.playerArray[data.userId] = {serviceId: data.serviceId, hand: _hand.cards, pattern: _hand.pattern, status: Code.Card.BACK, 
 			username: data.username, vip: data.vip, diamond: data.diamond, gold: data.gold};
@@ -185,22 +187,21 @@ Team.prototype.doUpdateTeamInfo = function(){
 	var userObjDict = {};
 	var users = this.playerArray;
 	for (var i in users){
-		var userId = users[i].userId;
-		if (userId === 0) {
+		if (i === 0) {
 			continue;
 		}
 
-		userObjDict[userId] = {status: users[i].status};
+		userObjDict[i] = {status: users[i].status};
 	}
 
 	if (Object.keys(userObjDict).length > 0) {
-		//this.teamChannel.pushMessage('onUpdateTeam', userObjDict);
-		this.teamChannel.pushMessageByUids('onUpdateTeam', userObjDict, this.playerUids);
-		if (this.playerNum >= 2 && this.isStart === false) {
+		this.teamChannel.pushMessage('onUpdateTeam', userObjDict);
+		//this.teamChannel.pushMessageByUids('onUpdateTeam', userObjDict, this.playerUids);
+		/*if (this.playerNum >= 2 && this.isStart === false) {
 			setTimeout(function(){
 				this.startGame();
 			}, 1000);
-		}
+		}*/
 	}
 }
 
@@ -216,8 +217,6 @@ Team.prototype.compareHand = function(data) {
 * 
 * @param: 
 */
-Team.prototype.
-
 Team.prototype.getTeammatesBasic = function(data){
 	if (!data || typeof(data) != 'object') {
 		return null;
@@ -231,7 +230,7 @@ Team.prototype.getTeammatesBasic = function(data){
 	}
 }
 
-Team.prototype.startGame = function(this){
+Team.prototype.startGame = function(){
 	if (this.playerNum > 2 && this.isStart === false) {
 		var _sched = later.parse.recur().every(3).second();
 		var _timeObj = later.setInterval(function(){
@@ -291,8 +290,8 @@ Team.prototype.createChannel = function(){
 	}
 
 	var channelName = channelUtil.getTeamChannelName(this.teamId);
-	//this.teamChannel = pomelo.app.get('channelService').getChannel(channelName, true);
-	this.teamChannel = pomelo.app.get('channelService');
+	this.teamChannel = pomelo.app.get('channelService').getChannel(channelName, true);
+	//this.teamChannel = pomelo.app.get('channelService');
 	if (this.teamChannel){
 		return this.teamChannel;
 	}
@@ -311,8 +310,8 @@ Team.prototype.addPlayer2Channel = function(data){
 	}
 
 	if (data) {
-		//var res = this.teamChannel.add(data.userId, data.serviceId);
-		this.playerUids.push({uid:data.userId, sid:data.serviceId});
+		var res = this.teamChannel.add(data.userId, data.serviceId);
+		//this.playerUids.push({uid:data.userId, sid:data.serviceId});
 		return true;
 	}
 
@@ -383,7 +382,7 @@ Team.prototype.pushTeamMsg2All = function(type, userId, amount){
 	 if (data.type === Const.TeamMsg.COMPARE_HAND) {
 
 	 } else {
-	 	_param = {type: type, userId:}
+	 	_param = {type: type, userId:userId}
 	 }
 
 	this.teamChannel.pushMessage('onTeamMsg', _param, null);

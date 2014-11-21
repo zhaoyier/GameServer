@@ -42,7 +42,7 @@ handler.createTeam = function(userId, roomType){
 	var _teamObj = new Team(++teamId);
 	var _data = {};
 
-	var _user = queryUserRecord(this, userId);
+	var _player = queryUserRecord(this, userId);
 	if (!!_player) {
 		_data = underscore.extend({}, {userId: userId, roomType: roomType}, _player);
 	} else {
@@ -50,6 +50,7 @@ handler.createTeam = function(userId, roomType){
 	}
 
 	var _status = _teamObj.onAddPlayer(_data);
+	console.log('create team ====>>', _status);
 	
 	if (_status === 200) {
 		this.teamMap[userId] = _teamObj.teamId;
@@ -82,10 +83,11 @@ handler.joinTeam = function(userId, roomType, callback){
 			_data = {userId: userId, serviceId: this.queryUserServerId(userId), roomType: roomType};
 		}
 
-		var _status = _teamObj.onAddPlayer({userId: userId, serverId: this.queryUserServerId(userId), roomType: roomType, });
+		var _status = _teamObj.onAddPlayer({userId: userId, serviceId: this.queryUserServerId(userId), roomType: roomType});
 		if (_status === 200) {
 			return callback(null, {teamId: _teamObj.teamId});
 		} else {
+			console.log('join team=================>>', _status);
 			return callback(201);
 		}		
 	} else {
@@ -93,6 +95,7 @@ handler.joinTeam = function(userId, roomType, callback){
 		if (_teamId != 0) {
 			callback(null, {teamId: _teamId});
 		} else {
+			console.log('join team=================>>', _teamId);
 			callback(201);
 		}
 	}

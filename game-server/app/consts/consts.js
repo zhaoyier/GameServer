@@ -29,7 +29,7 @@ module.exports = {
 		ADD_GOLD: 1,
 		BET_GOLD: 2,
 		EXCHANGE_GOLD: 3
-	}
+	},
 	XXConstant: {
 		UNKNOWN_ERROR: -1,
 		WIN: 1,
