@@ -27,7 +27,7 @@ var handler = Handler.prototype;
  * @param  {Function} next    next stemp callback
  * @return {Void}
  */
-handler.enter = function(msg, session, next) {
+handler.entry = function(msg, session, next) {
 	var username = msg.username, password = msg.password;
 	var self = this;
 	//authAccount
