@@ -30,6 +30,7 @@ var handler = Handler.prototype;
 handler.entry = function(msg, session, next) {
 	var username = msg.username, password = msg.password;
 	var self = this;
+	console.log('================aaa>>', username, password);
 	//authAccount
 	var uid, player;
 	async.waterfall([
@@ -58,7 +59,7 @@ handler.entry = function(msg, session, next) {
 		}
 	], function(error, results){
 		console.log('-----------:\t', error, results, player);
-		next(null, {username: 'zhaoyier', userId: player.userId});
+		next(null, {code:200, userId: player.userId});
 	})
 };
 

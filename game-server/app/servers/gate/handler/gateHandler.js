@@ -19,7 +19,7 @@ var handler = Handler.prototype;
  *
  */
 handler.queryEntry = function(msg, session, next) {
-	var uid = msg.uid;
+	var uid = msg.username;
 	if(!uid) {
 		next(null, {
 			code: 500
