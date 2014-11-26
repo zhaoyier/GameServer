@@ -40,7 +40,7 @@ handler.exchange = function(msg, session, next) {
 	var _userId = session.get('playerId');
 	var _amount = parseInt(msg.amount);
 
-	userAccount.exchangeGold(_userId, , function(error, res){
+	userAccount.exchangeGold(_userId, function(error, res){
 
 	})	
 }

@@ -67,7 +67,7 @@ userAccount.rechargeAccount = function(userId, money, from, tranId, cb){
 	})
 }
 
-userAccount.exchangeGold(userId, amount, cb) {
+userAccount.exchangeGold = function(userId, amount, cb) {
 	var _sql = 'select * from Account where uid = ?';
 	pomelo.app.get('dbclient').query(_sql, [userId], function(error, res){
 		if (error != null) {
