@@ -154,7 +154,7 @@ handler.bet = function(userId, amount, type, callback) {
 
 	updateUserAccount(this, type, userId, amount, function(error, res){
 		if (!error) {
-			var _ret = _teamObj.onBet({userId: userId, amount: amount, type: type});
+			var _ret = _teamObj.onBetHand({userId: userId, amount: amount, type: type});
 			if (!!_ret) {
 				return callback(null, 'ok');
 			} else {
@@ -203,6 +203,24 @@ handler.compareHand = function(userId, teammate, callback){
 		return callback(null, {win: 1});
 	} else {
 		return callback(null, {win: 0});
+	}
+}
+
+/**
+* 
+* @param: 
+*/
+handler.abandonHand = function(userId, callback){
+	var _teamObj = queryUserTeamObj(this, userId);
+	if (!_teamObj) {
+		return callback(201);
+	}
+
+	var _ret = _teamObj.onAbandonHand({userId: userId});
+	if (_ret) {
+		return callback(null);
+	} else {
+		return callback(201);
 	}
 }
 

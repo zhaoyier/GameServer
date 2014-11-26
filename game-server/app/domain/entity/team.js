@@ -3,6 +3,7 @@
 */
 var pomelo = require('pomelo');
 var later = require('later');
+var async = require('async');
 
 
 var poker = require('../config/poker');
@@ -25,7 +26,7 @@ function Team(teamId){
 	this.teamId = 0;
 	this.playerNum = 0;
 	this.playerUids = [];
-	this.playerSerial = {};
+	this.playerSeat = {};
 	this.playerArray = {};
 	this.teamStatus = 0;		//是否锁定
 	this.teamChannel = null;
@@ -133,7 +134,7 @@ Team.prototype.onCheckSelfHand = function(data) {
 *
 * @param: {userId, amount}
 */
-Team.prototype.onBet = function(data) {
+Team.prototype.onBetHand = function(data) {
 	if (!data || !data.userId) {
 		return false;
 	}
@@ -151,7 +152,7 @@ Team.prototype.onBet = function(data) {
 }
 
 /**
-*
+* 
 * @param: 
 */
 Team.prototype.onCompareHand = function(data){
@@ -167,14 +168,31 @@ Team.prototype.onCompareHand = function(data){
 }
 
 /**
+* 
+* @param:
+*/
+Team.prototype.onAbandonHand = function(data){
+	var _self = this.playerArray[data.userId];
+	if (!!_self) {
+		_self.status = Conde.Card.ABANDON;
+		var _ret = this.pushTeamMsg2All(Const.TeamMsg.ABANDON_HAND, data.userId, 0);
+		return _ret;
+	} else {
+		return false;
+	}	
+}
+
+/**
 *
 * @param: 
 */
 Team.prototype.doAddPlayer = function(teamObj, data){
+	var _seat = getPlayerSeat(playerSeat);
 	var _hand = Logic.createHandCard(teamObj.poker);
 	if (!!_hand && typeof(_hand) === 'object'){
 		console.log('hand11--------->>', _hand, !!_hand, typeof(_hand));
 		/*{username, vip, diamond, gold, serviceId}*/
+		this.playerSeat[data.userId] = _seat;
 		teamObj.playerArray[data.userId] = {serviceId: data.serviceId, hand: _hand.cards, pattern: _hand.pattern, status: Code.Card.BACK, 
 			username: data.username, vip: data.vip, diamond: data.diamond, gold: data.gold};
 		return true;
@@ -212,6 +230,8 @@ Team.prototype.doUpdateTeamInfo = function(){
 Team.prototype.compareHand = function(data) {
 
 }
+
+
 
 /**
 * 
@@ -370,7 +390,7 @@ Team.prototype.pushChatMsg2All = function(data){
 }
 
 /**
-* 
+* 通知卡牌信息
 * @param: {type, userId, amount}
 */
 Team.prototype.pushTeamMsg2All = function(type, userId, amount){
@@ -418,13 +438,13 @@ function getTeammateStatus(userId, teammates){
 	return null;
 }
 
-function getPlayerSerial(playerSerial){
-	if (!playerSerial || playerSerial.length >= MAX_MEMBER_NUM){
+function getPlayerSeat(playerSeat){
+	if (!playerSeat || playerSeat.length >= MAX_MEMBER_NUM){
 		return MAX_MEMBER_NUM;
 	}
 
 	for (var i=0; i<MAX_MEMBER_NUM; ++i) {
-		var _player = playerSerial[i];
+		var _player = playerSeat[i];
 		if (!_player) {
 			return i;
 		}

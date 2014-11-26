@@ -6,6 +6,7 @@ var async = require('async');
 var us = require('underscore');
 
 var userDao = require('../../../dao/userDao');
+var userAccount = require('../../../dao/userAccount');
 
 module.exports = function(app) {
     return new GameHandler(app, app.get('gameService'));
@@ -39,7 +40,7 @@ handler.enter = function(msg, session, next){
         },
         function(callback){
             //查询帐户信息
-            userDao.queryAccount(_userId, function(error, res){
+            userAccount.queryAccount(_userId, function(error, res){
                 if (error || res.code != 200){
                     callback(null, {});
                 } else {
@@ -121,7 +122,7 @@ handler.queryTeammateInfo = function(msg, session, next){
 }
 
 /**
-*
+* 
 * @param: 
 */
 handler.bet = function(msg, session, next){
@@ -142,7 +143,7 @@ handler.bet = function(msg, session, next){
 }
 
 /**
-*
+* 
 * @param: 
 */
 handler.check = function(msg, session, next){
@@ -163,7 +164,7 @@ handler.check = function(msg, session, next){
 }
 
 /**
-*
+* 
 *@param: 
 */
 handler.compare = function(msg, session, next){
@@ -185,14 +186,31 @@ handler.compare = function(msg, session, next){
     } else {
         return next(null, {code: 201});
     }
+}
+
+/**
+* 放弃
+*@param: 
+*/
+handler.abandon = function(msg, session, next){
+    var _userId = session.get('playerId');
+    var _gameService = this.gameService;
+
+    if (!!_userId) {
+        _gameService.abandonHand(_userId, function(error, res){
+            if (!error) {
+                return next (null, {code: 200});
+            } else {
+                return next (null, {code: 201});
+            }
+        })
+    } else {
+        return next(null, {code: 201})
+    }
 
 }
 
 /**
-*
-*@param: 
+* 
+* @param: 
 */
-handler.abandon = function(msg, session, next){
-
-
-}
