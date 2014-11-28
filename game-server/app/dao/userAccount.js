@@ -110,7 +110,7 @@ userAccount.auctionGold = function(userId, gold, diamond, cb){
 					return utils.invokeCallback(cb, 201, {code: 201});
 				}
 
-				_sql = 'insert into AuctionGold(uid, diamond, gold) values(?,?,?)';
+				_sql = 'insert into AuctionGold(saler, diamond, gold) values(?,?,?)';
 				execSql(_sql, [userId, diamond, gold], function(error, insert){
 					if (error != null) {
 						return utils.invokeCallback(cb, 201, {code: 201});
@@ -145,25 +145,64 @@ userAccount.buyGold = function(userId, serial, cb){
 		}
 	})
 
+	var _self, _other;
 	async.waterfall([
-			function(callback){
-				var _sql = 'select * from Account where uid = ?';
-				execSql(_sql, [userId], cb);
-			}, function(self, callback){
-				if (!!self && self.length === 1) {
-					var _sql = 'select * from AuctionGold where id = ?';
-					execSql(_sql, [serial], function(error, auction){
-						if (error)
-					})
+		function(callback){
+			var _sql = 'select * from Account where uid = ? and status = 0';
+			execSql(_sql, [userId], cb);
+		}, function(self, callback){
+			_self = self;
+			var _sql = 'select * from AuctionGold where id = ?';
+			execSql(_sql, [serial], callback);
+		},
+		function(auction, callback){
+			if (_self.length === 1 && auction.length === 1){
+				if (_self[0].diamond >= auction[0].diamond) {
+					_self[0].diamond -= auction[0].diamond;
+					_self[0].gold += getAuctionGold(auction[0].gold);
+					_other = auction;
+					dealAuctionData({userId: auction[0].saler, diamond: auction[0].diamond}, {userId: userId, gold: auction[0].gold, diamond: auction[0].diamond}, serial, callback);
 				} else {
-					callback(201);
+					callback(202);
 				}
+			} else {
+				callback(203);
 			}
+		}
+	], function(error, res){
+		if (error === null) {
+			//自己的钻石和金币，别人的ID和钻石
+			var _data = {self: {diamond: _self[0].diamond, gold: _self[0].gold}, other: {userId: _other[0].userId, diamond: getAuctionDiamond(_other[0].diamond)}}; 
+			cb(null, _data);
+		} else {
+			cb(201);
+		}
+	})
+}
 
-		], function(error, res){
-
-		})
-
+function dealAuctionData(saler, buyer, serial, cb){
+	async.waterfall([
+		function(callback) {
+			var _diamond = getAuctionDiamond(saler.diamond);
+			var _sql = 'update Account set diamond = diamond+? where uid = ?';
+			execSql(_sql, [_diamond, saler.userId], callback);
+		}, function(res, callback){
+			var _diamond = buyer.diamond;
+			var _gold = getAuctionGold(buyer.gold);
+			var _userId = buyer.userId;
+			var _sql = 'update Account set diamond = diamond-?, gold = gold+? where uid = ?';
+			execSql(_sql, [_diamond, _gold, _userId], callback);
+		}, function(res, callback){
+			var _sql = 'update AuctionGold set status = 1 where id = ?';
+			execSql(_sql, [serial], callback);
+		}
+	], function(error, res){
+		if (error === null) {
+			callback(null, res);
+		} else {
+			callback(201);
+		}
+	})
 }
 
 userAccount.consumeAccountDiamond = function(userId, diamond, cb){
@@ -303,6 +342,15 @@ function getAuctionGold(gold){
 	return gold;
 }
 
+function getAuctionGoldTax(gold){
+	return 100;
+}
+
 function getAuctionDiamond(diamond){
 	return diamond;
 }
+
+function getAuctionDiamondTax(diamond){
+	return 100;
+}
+
