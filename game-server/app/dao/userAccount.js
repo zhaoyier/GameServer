@@ -67,19 +67,19 @@ userAccount.rechargeAccount = function(userId, money, from, tranId, cb){
 	})
 }
 
-userAccount.exchangeGold = function(userId, amount, cb) {
+userAccount.exchangeGold = function(userId, diamond, cb) {
 	var _sql = 'select * from Account where uid = ?';
 	pomelo.app.get('dbclient').query(_sql, [userId], function(error, res){
 		if (error != null) {
 			logger.error('');
 			utils.invokeCallback(cb, error, null);
 		} else if (!!res && res.length === 1) {
-			if (res[0].diamond >= amount) {
+			if (res[0].diamond < diamond) {
 				return utils.invokeCallback(cb, 201, null);
 			} else {
-				var _gold = res[0].gold+amount*10000;
+				var _gold = res[0].gold+diamond*10000;
 				_sql = 'update Account set diamond = diamond - ? , gold = gold + ? where uid = ?';
-				pomelo.app.get('dbclient').query(_sql, [amount, _gold, userId], function(error, res){
+				pomelo.app.get('dbclient').query(_sql, [diamond, _gold, userId], function(error, res){
 					return utils.invokeCallback(cb, null, {code: 200, gold: _gold});
 				})
 			}
@@ -89,6 +89,82 @@ userAccount.exchangeGold = function(userId, amount, cb) {
 	})
 }
 
+/**
+* 拍卖金币
+* @param: 
+*/
+userAccount.auctionGold = function(userId, gold, diamond, cb){
+	var _sql = 'select * from Account where uid = ?';
+	var _param = [userId];
+
+	execSql(_sql, _param, function(error, query){
+		if (error === null) {
+			var _gold = query[0].gold;
+			if (query[0].gold < gold) {
+				return utils.invokeCallback(cb, 201, {code: 201});
+			}
+
+			_sql = 'update Account set gold = gold - ? where uid = ?';
+			execSql(_sql, [gold, userId], function(error, update){
+				if (error != null) {
+					return utils.invokeCallback(cb, 201, {code: 201});
+				}
+
+				_sql = 'insert into AuctionGold(uid, diamond, gold) values(?,?,?)';
+				execSql(_sql, [userId, diamond, gold], function(error, insert){
+					if (error != null) {
+						return utils.invokeCallback(cb, 201, {code: 201});
+					}
+
+					return utils.invokeCallback(cb, null, {code: 200, gold: (_gold-gold)});
+				})
+			})
+		} else {
+			return utils.invokeCallback(cb, null, {code:201});
+		}
+	})
+}
+
+/**
+* 购买金币
+* @param: 
+*/
+userAccount.buyGold = function(userId, serial, cb){
+	var _sql = 'select * from Account where uid = ?';
+	execSql(_sql, [userId], function(error, self){
+		if (error === null) {
+			var _selfDiamond = self[0].diamond;
+			_sql = 'select * from AuctionGold where id = ?';
+			execSql(_sql, [serial], function(error, auction){
+				if (error != null) {
+					return utils.invokeCallback(cb, 201, {code: 201});
+				}
+
+				if (auction[0].diamond <= _selfDiamond)
+			})
+		}
+	})
+
+	async.waterfall([
+			function(callback){
+				var _sql = 'select * from Account where uid = ?';
+				execSql(_sql, [userId], cb);
+			}, function(self, callback){
+				if (!!self && self.length === 1) {
+					var _sql = 'select * from AuctionGold where id = ?';
+					execSql(_sql, [serial], function(error, auction){
+						if (error)
+					})
+				} else {
+					callback(201);
+				}
+			}
+
+		], function(error, res){
+
+		})
+
+}
 
 userAccount.consumeAccountDiamond = function(userId, diamond, cb){
 	var sql = 'select * from Account where uid = ?';
@@ -197,6 +273,12 @@ userAccount.exchangeDiamond = function(uid, amount, cb){
 	})
 }
 
+function execSql(sql, param, callback){
+	pomelo.app.get('dbclient').query(sql, param, function(error, res){
+		callback(error, res);
+	})
+}
+
 function getUserRechargeDiamond(amount, options){
 	if (!!options && options === 0) {
 		return parseInt(amount)*2;
@@ -207,4 +289,20 @@ function getUserRechargeDiamond(amount, options){
 
 function getUserVip (amount) {
 	return 1;
+}
+
+function getExchangeGold(diamond){
+	if (!!diamond) {
+		return diamond*10000;
+	} else {
+		return 
+	}
+}
+
+function getAuctionGold(gold){
+	return gold;
+}
+
+function getAuctionDiamond(diamond){
+	return diamond;
 }

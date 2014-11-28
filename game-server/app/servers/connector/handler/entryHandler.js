@@ -30,16 +30,12 @@ var handler = Handler.prototype;
 handler.entry = function(msg, session, next) {
 	var username = msg.username, password = msg.password;
 	var self = this;
-	console.log('================aaa>>', username, password);
 	//authAccount
 	var uid, player;
 	async.waterfall([
 		function(cb){
-			console.log('===================enter>>>:\t', username, password)
-			userDao.authUser(username, password, cb);	
-			//userDao.authUser('zhaoyier', '111111', cb);	
-		},
-		function(res, cb){
+			userDao.authUser(username, password, cb);
+		}, function(res, cb){
 			player = res;
 			uid = res.userId
 			if (parseInt(uid) === 0) {

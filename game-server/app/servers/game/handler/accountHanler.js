@@ -38,27 +38,45 @@ handler.recharge = function(msg, session, next) {
 **/
 handler.exchange = function(msg, session, next) {
 	var _userId = session.get('playerId');
-	var _amount = parseInt(msg.amount);
+	var _diamond = parseInt(msg.diamond);
 
-	userAccount.exchangeGold(_userId, function(error, res){
-
+	userAccount.exchangeGold(_userId, _diamond, function(error, res){
+		if (error === null) {
+			return next(null, {code: 200, diamond: 100, gold: 200});
+		} else {
+			return next(null, {code: 201});	
+		}
 	})	
 }
 
 /**
-* 拍卖, 拍卖钻石
+* 拍卖金币
 * @param:
 */
-handler.auction = function(msg, session, next){
-	next(null, {msg: 'hello'});
+handler.auctionGold = function(msg, session, next){
+	var _userId = session.get('playerId');
+	var _gold = parseInt(msg.gold||0);
+	var _diamond = parseInt(msg.diamond||0);
+
+	userAccount.auctionGold(_userId, _gold, _diamond, function(error, res){
+		if (error === null) {
+			return next(null, {code: 200, gold: 200});
+		} else {
+			return next(null, {code: 201});
+		}
+	})
 }
 
 /**
-* 购买钻石
+* 购买金币
 * @param: 
 */
-handler.purchase = function(msg, session, next) {
-	
+handler.buyGold = function(msg, session, next) {
+	var _userId = session.get('playerId');
+	var _auctionSerial = msg.serial;
+	userAccount.buyGold(_userId, _auctionSerial, function(error, res){
+
+	})
 }
 
 /**
