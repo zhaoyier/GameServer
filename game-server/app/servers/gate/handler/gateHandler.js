@@ -19,16 +19,16 @@ var handler = Handler.prototype;
  *
  */
 handler.queryEntry = function(msg, session, next) {
-	var uid = msg.username;
-	if(!uid) {
+	var _rid = msg.rid;
+	if(!_rid) {
 		next(null, {
 			code: 500
 		});
 		return;
 	}
 	// get all connectors
-	var connectors = this.app.getServersByType('connector');
-	if(!connectors || connectors.length === 0) {
+	var _connectors = this.app.getServersByType('connector');
+	if(!_connectors || _connectors.length === 0) {
 		next(null, {
 			code: 500
 		});
@@ -39,10 +39,10 @@ handler.queryEntry = function(msg, session, next) {
 	//console.log('************:\t', ip);
 
 	// select connector, because more than one connector existed.
-	var res = dispatcher.dispatch(uid, connectors);
+	var _res = dispatcher.dispatch(_rid, _connectors);
 	next(null, {
 		code: 200,
-		host: res.host,
-		port: res.clientPort
+		host: _res.host,
+		port: _res.clientPort
 	});
 };
