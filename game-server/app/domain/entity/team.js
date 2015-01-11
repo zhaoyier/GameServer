@@ -51,7 +51,7 @@ var handler = Team.prototype;
 * @param: 
 */
 Team.prototype.onAddPlayer = function(data){
-	console.log('+++++++++++++>>>', data, !data, !data.userId, !data.serviceId)	
+	//console.log('+++++++++++++>>>', data, !data, !data.userId, !data.serviceId);
 	if (!data || !data.userId || !data.serviceId){
 		return Code.Team.DATA_ERR;
 	}
@@ -190,7 +190,6 @@ Team.prototype.doAddPlayer = function(teamObj, data){
 	var _seat = getPlayerSeat(this.playerSeat);
 	var _hand = Logic.createHandCard(teamObj.poker);
 	if (!!_hand && typeof(_hand) === 'object'){
-		console.log('hand11--------->>', _hand, !!_hand, typeof(_hand));
 		/*{username, vip, diamond, gold, serviceId}*/
 		this.playerSeat[data.userId] = _seat;
 		teamObj.playerArray[data.userId] = {serviceId: data.serviceId, hand: _hand.cards, pattern: _hand.pattern, status: Code.Card.BACK, 
@@ -209,7 +208,7 @@ Team.prototype.doUpdateTeamInfo = function(){
 			continue;
 		}
 
-		userObjDict[i] = {status: users[i].status};
+		userObjDict[i] = {status: users[i].status, username: users[i].username, userId: i, diamond: users[i].diamond, gold: users[i].gold};
 	}
 
 	if (Object.keys(userObjDict).length > 0) {

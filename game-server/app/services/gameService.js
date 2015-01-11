@@ -83,7 +83,7 @@ handler.joinTeam = function(userId, roomType, callback){
 			_data = {userId: userId, serviceId: this.queryUserServerId(userId), roomType: roomType};
 		}
 
-		var _status = _teamObj.onAddPlayer({userId: userId, serviceId: this.queryUserServerId(userId), roomType: roomType});
+		var _status = _teamObj.onAddPlayer(_data);
 		if (_status === 200) {
 			return callback(null, {teamId: _teamObj.teamId});
 		} else {
