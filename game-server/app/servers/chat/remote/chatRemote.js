@@ -31,7 +31,11 @@ ChatRemote.prototype.leave =function(uid, channelName, cb){
  */
 ChatRemote.prototype.kick = function(uid, cb){
 	this.chatService.kick(uid);
-	cb();
+	if (typeof(cb) === 'function'){
+		cb();
+	} else {
+		console.log('============>>>'+'kick');
+	}
 };
 
 

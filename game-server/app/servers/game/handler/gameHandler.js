@@ -23,7 +23,7 @@ var handler = GameHandler.prototype;
 * 进入游戏查询用户基本信息
 *@param: {}
 */
-handler.enter = function(msg, session, next){
+handler.queryUserBasic = function(msg, session, next){
     var _userId = session.get('playerId');
 	var _gameService = this.gameService;
 
@@ -34,7 +34,7 @@ handler.enter = function(msg, session, next){
                 if (error || res.code != 200){
                     callback(null, {});
                 } else {
-                    callback(null, {username: res.username})
+                    callback(null, {username: res.username, uid: res.uid})
                 }
             })
         },
@@ -58,6 +58,7 @@ handler.enter = function(msg, session, next){
         }
     ], function(error, res){
         var data = us.extend({}, res[0], res[1], res[2]);
+		console.log('===============>>>>>', data);
         /*{username, vip, diamond, gold, serviceId}*/
         _gameService.enterGame(_userId, data, function(error, res){
             if (res.code === 200){
@@ -112,7 +113,7 @@ handler.queryTeammateInfo = function(msg, session, next){
     var _userId = session.get('playerId');
     var _gameService = this.gameService;
     
-    _gameService.queryTeammateInfo(_userId, msg.userId, function(error, res){
+    _gameService.queryTeammateInfo(_userId, msg.teammate, function(error, res){
         if (!error) {
             next(null, {code: 200});
         } else {

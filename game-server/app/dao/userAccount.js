@@ -140,7 +140,9 @@ userAccount.buyGold = function(userId, serial, cb){
 					return utils.invokeCallback(cb, 201, {code: 201});
 				}
 
-				if (auction[0].diamond <= _selfDiamond)
+				if (auction[0].diamond <= _selfDiamond){
+					return utils.invokeCallback(cb, 201, {code: 201});
+				}
 			})
 		}
 	})

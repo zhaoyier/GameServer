@@ -236,7 +236,7 @@ var addUserRecord = function(service, userId, data){
 var queryUserRecord = function(service, userId){
 	var _user = service.uidMap[userId];
 	if (!!_user) {
-		callback(null, _user);
+		//callback(null, _user);
 		return _user;
 	} else {
 		return null;

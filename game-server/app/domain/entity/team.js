@@ -187,7 +187,7 @@ Team.prototype.onAbandonHand = function(data){
 * @param: 
 */
 Team.prototype.doAddPlayer = function(teamObj, data){
-	var _seat = getPlayerSeat(playerSeat);
+	var _seat = getPlayerSeat(this.playerSeat);
 	var _hand = Logic.createHandCard(teamObj.poker);
 	if (!!_hand && typeof(_hand) === 'object'){
 		console.log('hand11--------->>', _hand, !!_hand, typeof(_hand));

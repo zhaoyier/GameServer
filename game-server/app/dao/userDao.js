@@ -57,7 +57,8 @@ userDao.queryUser = function(userId, cb){
 			utils.invokeCallback(cb, error, null);
 		} else {
 			if (!!res && res.length === 1){
-				utils.invokeCallback(cb, null, {code: 200, username:res[0].username});
+				//console.log('===================>>>>>', res[0]);
+				utils.invokeCallback(cb, null, {code: 200, uid: res[0].uid, username:res[0].username});
 				return ;
 			} else {
 				logger.error('');
