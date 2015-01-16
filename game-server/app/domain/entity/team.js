@@ -24,14 +24,16 @@ module.exports = Team;
 
 function Team(teamId){
 	this.teamId = 0;
+	this.startTime = 0;
 	this.playerNum = 0;
+	this.activeNum = 0;
 	this.playerUids = [];
 	this.playerSeat = {};
 	this.playerArray = {};
 	this.teamStatus = 0;		//是否锁定
 	this.teamChannel = null;
 	this.poker = [];
-	this.isStart = false;
+	this.isOnGame = false;
 
 	var _this = this;
 	var init = function() {
@@ -80,7 +82,7 @@ Team.prototype.onAddPlayer = function(data){
 		this.playerNum++;
 	}
 
-	this.doUpdateTeamInfo();
+	this.doUpdateTeamInfo(data.userId);
 
 	return Code.OK;
 }
@@ -97,15 +99,14 @@ Team.prototype.onRemovePlayer = function(data) {
 	var _player = this.playerArray[data.userId];
 	if (!!_player) {
 		if (this.playerNum >= 1) {
-			this.playerNum--;
+			this.playerNum -= 1;
+			this.activeNum -= 1;
 		} else {
 			this.playerNum = 0;
 		}
 
-		pushLeaveMsg2All(data.userId, data.serviceId);
-
 		delete this.playerArray[data.userId];
-
+		pushLeaveMsg2All(data.userId, data.serviceId);
 	} else {
 		return 201;
 	}
@@ -123,7 +124,7 @@ Team.prototype.onCheckSelfHand = function(data) {
 	var _player = this.playerArray[data.userId];
 	if (!!_player) {
 		_player['status'] = Code.Card.BACK;
-		this.pushTeamMsg2All(Const.TeamMsg.CHECK_HAND, data.userId, 0);
+		this.pushHandStatusMsg2All(data.userId, 0);
 		return {hand: _player.hand, pattern: _player.pattern};
 	} else {
 		return null;
@@ -131,8 +132,8 @@ Team.prototype.onCheckSelfHand = function(data) {
 }
 
 /**
-*
-* @param: {userId, amount}
+* function: 处理押注
+* @param: {userId, amount, type}
 */
 Team.prototype.onBetHand = function(data) {
 	if (!data || !data.userId) {
@@ -143,7 +144,7 @@ Team.prototype.onBetHand = function(data) {
 	if (!!_player) {
 		if (_player.status != Code.Code.ABANDON) {
 			var _status = (!!_player.status) ? Const.TeamMsg.CHECK_BET : Const.TeamMsg.BACK_BET;
-			this.pushTeamMsg2All(_status, data.userId, data.amount);
+			this.pushBetHandMsg2All(data.userId, data.type, data.amount);
 			return true;
 		}
 	}
@@ -155,15 +156,15 @@ Team.prototype.onBetHand = function(data) {
 * 
 * @param: 
 */
-Team.prototype.onCompareHand = function(data){
+Team.prototype.onCompareHand = function(data, callback){
 	var _self = this.playerArray[data.userId];
 	var _teammate = this.playerArray[data.teammate];
 	if (!!_self && !!_teammate) {
 		var _ret = Logic.getCompareSize({cards: _self.hand, pattern: _self.pattern}, {cards: _teammate.hand, pattern: _teammate.pattern}, true);
-		this.pushTeamMsg2All(Const.TeamMsg.COMPARE_HAND, data.userId, {userId:data.teammate, win: (!!_ret ? 1: 0)});
-		return !!_ret ? false : true;
+		this.pushCompareHandMsg2All(data.userId, data.teammate, _ret);
+		callback(null, {status: _ret, number: this.activeNum});
 	} else {
-		return null;
+		callback(203);
 	}		
 }
 
@@ -174,8 +175,9 @@ Team.prototype.onCompareHand = function(data){
 Team.prototype.onAbandonHand = function(data){
 	var _self = this.playerArray[data.userId];
 	if (!!_self) {
+		this.activeNum -= 1;
 		_self.status = Conde.Card.ABANDON;
-		var _ret = this.pushTeamMsg2All(Const.TeamMsg.ABANDON_HAND, data.userId, 0);
+		var _ret = this.pushHandStatusMsg2All(data.userId, 1);
 		return _ret;
 	} else {
 		return false;
@@ -187,11 +189,11 @@ Team.prototype.onAbandonHand = function(data){
 * @param: 
 */
 Team.prototype.doAddPlayer = function(teamObj, data){
-	var _seat = getPlayerSeat(this.playerSeat);
+	var _playerSeat = getPlayerSeat(this.playerSeat);
 	var _hand = Logic.createHandCard(teamObj.poker);
 	if (!!_hand && typeof(_hand) === 'object'){
 		/*{username, vip, diamond, gold, serviceId}*/
-		this.playerSeat[data.userId] = _seat;
+		this.playerSeat[data.userId] = _playerSeat;
 		teamObj.playerArray[data.userId] = {serviceId: data.serviceId, hand: _hand.cards, pattern: _hand.pattern, status: Code.Card.BACK, 
 			username: data.username, vip: data.vip, diamond: data.diamond, gold: data.gold};
 		return true;
@@ -200,25 +202,20 @@ Team.prototype.doAddPlayer = function(teamObj, data){
 	}
 }
 
-Team.prototype.doUpdateTeamInfo = function(){
+Team.prototype.doUpdateTeamInfo = function(userId){
 	var userObjDict = {};
 	var users = this.playerArray;
 	for (var i in users){
-		if (i === 0) {
-			continue;
+		if (i != 0) {
+			userObjDict[i] = {status: users[i].status, username: users[i].username, vip: users[i].vip, diamond: users[i].diamond, gold: users[i].gold, seat: users[i].seat};
 		}
-
-		userObjDict[i] = {status: users[i].status, username: users[i].username, userId: i, diamond: users[i].diamond, gold: users[i].gold};
 	}
 
 	if (Object.keys(userObjDict).length > 0) {
 		this.teamChannel.pushMessage('onUpdateTeam', userObjDict);
-		//this.teamChannel.pushMessageByUids('onUpdateTeam', userObjDict, this.playerUids);
-		/*if (this.playerNum >= 2 && this.isStart === false) {
-			setTimeout(function(){
-				this.startGame();
-			}, 1000);
-		}*/
+		setTimeout(function(){
+			this.startGame();
+		}, 1000);
 	}
 }
 
@@ -249,25 +246,45 @@ Team.prototype.getTeammatesBasic = function(data){
 	}
 }
 
+/**
+* function: 
+* @param: 
+* 
+*/
 Team.prototype.startGame = function(){
-	if (this.playerNum > 2 && this.isStart === false) {
-		var _sched = later.parse.recur().every(3).second();
+	var now = Date.now();
+	if (this.startTime === 0) {
+		//第一次开始游戏
+		if (this.playerNum >= 2 && this.isOnGame === false) {
+			setTimeout(function(){
+				this.isOnGame = true;
+				this.activeNum = this.playerNum;
+				this.teamChannel.pushMessage('onStartGame', {});
+			}, 1000);
+		}
+	} else {
+		var _sched = later.parse.recur().every(5).second();
 		var _timeObj = later.setInterval(function(){
-			this.startGame = true;
-			this.teamChannel.pushMessage('onStartGame', {});
-			_timeObj.clear();
+			var _timeDiff = Date.now()-this.startTime;
+			if (_timeDiff >= 4000 && this.playerNum >= 2 && this.isOnGame = false) {
+				_timeObj.clear();
+				this.isOnGame = true;
+				this.activeNum = this.playerNum;
+				this.teamChannel.pushMessage('onStartGame', {});
+			}
 		}, _sched);
 	}
 }
 
-Team.prototype.restartGame = function() {
-	this.isStart = false;
+Team.prototype.restartGame = function(){
+	this.isOnGame = false;
 	this.poker = poker.getXXPoker();
 	for (var i in this.playerArray) {
 		var _hand = Logic.createHandCard(this.poker);
 		this.playerArray[i]['hand'] = _hand.cards;
 		this.playerArray[i]['pattern'] = _hand.pattern;
 	}
+
 	setTimeout(function(){
 		this.startGame();
 	}, 1000);
@@ -342,7 +359,7 @@ Team.prototype.addPlayer2Channel = function(data){
 * @param: {userId, serviceId}
 * 
 */
-/*Team.prototype.removePlayerFromChannel = function(data){
+Team.prototype.removePlayerFromChannel = function(data){
 	if (!this.teamChannel){
 		return false;
 	}
@@ -352,7 +369,7 @@ Team.prototype.addPlayer2Channel = function(data){
 		return true;
 	}
 	return false;
-}*/
+}
 
 /**
 * 
@@ -405,6 +422,51 @@ Team.prototype.pushTeamMsg2All = function(type, userId, amount){
 	 }
 
 	this.teamChannel.pushMessage('onTeamMsg', _param, null);
+	return true;
+}
+
+/**
+* 通知卡牌状态信息
+* @param: {type, userId, amount}
+*/
+Team.prototype.pushHandStatusMsg2All = function(_userId, _status){
+	if (!this.teamChannel) {
+		return false;
+	}
+
+	var _msg = {userId: _userId, status: _status};
+
+	this.teamChannel.pushMessage('onNoticeHandMsg', _msg);
+	return true;
+}
+
+
+/**
+* 通知押注信息
+* @param: {type, userId, amount}
+*/
+Team.prototype.pushBetHandMsg2All = function(_userId, _type, _amount){
+	if (!this.teamChannel) {
+		return false;
+	}
+
+	var _msg = {userId: _userId, type: _type, amount: _amount}
+
+	this.teamChannel.pushMessage('onBetHandMsg', _msg);
+	return true;
+}
+
+/**
+* 通知比较卡牌信息
+* @param: {type, userId, amount}
+*/
+Team.prototype.pushCompareHandMsg2All = function(_initiative, _passivity, _status){
+	if (!this.teamChannel) {
+		return false;
+	}
+
+	var _msg = {initiative: _initiative, passivity: _passivity, status: _status};
+	this.teamChannel.pushMessage('onCompareHandMsg', _msg);
 	return true;
 }
 

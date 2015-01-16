@@ -170,7 +170,7 @@ handler.bet = function(userId, amount, type, callback) {
 * 
 * @param: 
 */
-handler.checkHand = function(userId, callback){
+handler.checkHand = function(userId, callback) {
 	var _teamObj = queryUserTeamObj(this, userId);
 	if (!!_teamObj) {
 		var _hand = _teamObj.onCheckSelfHand(userId, callback);
@@ -198,7 +198,13 @@ handler.compareHand = function(userId, teammate, callback){
 		return callback(202);
 	}
 
-	var _ret = _teamObj.onCompareHand({userId: userId, teammate: teammate});
+	var _ret = _teamObj.onCompareHand({userId: userId, teammate: teammate}, function(error, res){
+		if (!error) {
+			return callback(error, {status: res.status, active: res.number});
+		} else {
+			return callback(203);
+		}
+	});
 	if (_ret != null) {
 		return callback(null, {win: 1});
 	} else {
