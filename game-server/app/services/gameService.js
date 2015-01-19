@@ -1,4 +1,5 @@
 var underscore = require('underscore');
+var later = require('later');
 
 var Team = require('../domain/entity/team');
 var Code = require('../consts/code');
@@ -120,7 +121,36 @@ handler.leaveTeam = function(userId, callback) {
 	} else {
 		return callback(201);
 	}
+}
 
+/**
+*  
+* @param: 
+*/
+handler.startGame = function(userId, callback) {
+	var _teamObj = queryUserTeamObj(this, userId);
+	if (!!_teamObj) {
+		_teamObj.startGame({uesrId: userId}, function(error, res){
+			callback(error, res);
+		})
+	} else {
+		callback(201);
+	}
+}
+
+/**
+*  
+* @param: 
+*/
+handler.restartGame = function(userId, callback) {
+	var _teamObj = queryUserTeamObj(this, userId);
+	if (!!_teamObj) {
+		_teamObj.restartGame({uesrId: userId}, function(error, res){
+			callback(error, res);
+		})
+	} else {
+		callback(201);
+	}
 }
 
 /**

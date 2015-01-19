@@ -52,9 +52,8 @@ var handler = Team.prototype;
 * 
 * @param: 
 */
-Team.prototype.onAddPlayer = function(data){
-	//console.log('+++++++++++++>>>', data, !data, !data.userId, !data.serviceId);
-	if (!data || !data.userId || !data.serviceId){
+Team.prototype.onAddPlayer = function(param){
+	if (!param || !param.userId || !param.serviceId){
 		return Code.Team.DATA_ERR;
 	}
 
@@ -62,19 +61,19 @@ Team.prototype.onAddPlayer = function(data){
 		return Code.Team.TEAM_FULL;
 	}
 
-	if (this.isPlayerInTeam(data.userId)) {
+	if (this.isPlayerInTeam(param.userId)) {
 		return Code.Team.ALREADY_IN_TEAM;
 	}
 
-	if (!this.doAddPlayer(this, data)){
+	if (!this.doAddPlayer(this, param)){
 		return Code.Team.SYS_ERROR;
 	}
 
-	if (!this.isPlayerInTeam(data.userId)){
+	if (!this.isPlayerInTeam(param.userId)){
 		return Code.Team.SYS_ERROR;
 	}
 
-	if (!this.addPlayer2Channel(data)){
+	if (!this.addPlayer2Channel(param)){
 		return Code.Team.SYS_ERROR;
 	}
 
@@ -82,7 +81,7 @@ Team.prototype.onAddPlayer = function(data){
 		this.playerNum++;
 	}
 
-	this.doUpdateTeamInfo(data.userId);
+	this.doUpdateTeamInfo(param.userId);
 
 	return Code.OK;
 }
@@ -91,12 +90,12 @@ Team.prototype.onAddPlayer = function(data){
 * 
 * @param: 
 */
-Team.prototype.onRemovePlayer = function(data) {
-	if (!data || !data.userId || !data.serviceId) {
+Team.prototype.onRemovePlayer = function(param) {
+	if (!param || !param.userId || !param.serviceId) {
 		return 201;
 	}
 
-	var _player = this.playerArray[data.userId];
+	var _player = this.playerArray[param.userId];
 	if (!!_player) {
 		if (this.playerNum >= 1) {
 			this.playerNum -= 1;
@@ -105,8 +104,8 @@ Team.prototype.onRemovePlayer = function(data) {
 			this.playerNum = 0;
 		}
 
-		delete this.playerArray[data.userId];
-		pushLeaveMsg2All(data.userId, data.serviceId);
+		delete this.playerArray[param.userId];
+		pushLeaveMsg2All(param.userId, param.serviceId);
 	} else {
 		return 201;
 	}
@@ -116,15 +115,15 @@ Team.prototype.onRemovePlayer = function(data) {
 * 
 * @param: {userId}
 */
-Team.prototype.onCheckSelfHand = function(data) {
-	if (!data || !data.userId) {
+Team.prototype.onCheckSelfHand = function(param) {
+	if (!param || !param.userId) {
 		return null;
 	}
 
-	var _player = this.playerArray[data.userId];
+	var _player = this.playerArray[param.userId];
 	if (!!_player) {
 		_player['status'] = Code.Card.BACK;
-		this.pushHandStatusMsg2All(data.userId, 0);
+		this.pushHandStatusMsg2All(param.userId, 0);
 		return {hand: _player.hand, pattern: _player.pattern};
 	} else {
 		return null;
@@ -135,16 +134,16 @@ Team.prototype.onCheckSelfHand = function(data) {
 * function: 处理押注
 * @param: {userId, amount, type}
 */
-Team.prototype.onBetHand = function(data) {
-	if (!data || !data.userId) {
+Team.prototype.onBetHand = function(param) {
+	if (!param || !param.userId) {
 		return false;
 	}
 
-	var _player = this.playerArray[data.userId];
+	var _player = this.playerArray[param.userId];
 	if (!!_player) {
 		if (_player.status != Code.Code.ABANDON) {
 			var _status = (!!_player.status) ? Const.TeamMsg.CHECK_BET : Const.TeamMsg.BACK_BET;
-			this.pushBetHandMsg2All(data.userId, data.type, data.amount);
+			this.pushBetHandMsg2All(param.userId, param.type, param.amount);
 			return true;
 		}
 	}
@@ -156,13 +155,14 @@ Team.prototype.onBetHand = function(data) {
 * 
 * @param: 
 */
-Team.prototype.onCompareHand = function(data, callback){
-	var _self = this.playerArray[data.userId];
-	var _teammate = this.playerArray[data.teammate];
+Team.prototype.onCompareHand = function(param, callback){
+	var _self = this.playerArray[param.userId];
+	var _teammate = this.playerArray[param.teammate];
 	if (!!_self && !!_teammate) {
 		var _ret = Logic.getCompareSize({cards: _self.hand, pattern: _self.pattern}, {cards: _teammate.hand, pattern: _teammate.pattern}, true);
-		this.pushCompareHandMsg2All(data.userId, data.teammate, _ret);
-		callback(null, {status: _ret, number: this.activeNum});
+		this.pushCompareHandMsg2All(param.userId, param.teammate, _ret, function(error, res){
+			callback(null, {status: _ret, number: this.activeNum});
+		});		
 	} else {
 		callback(203);
 	}		
@@ -172,12 +172,12 @@ Team.prototype.onCompareHand = function(data, callback){
 * 
 * @param:
 */
-Team.prototype.onAbandonHand = function(data){
-	var _self = this.playerArray[data.userId];
+Team.prototype.onAbandonHand = function(param){
+	var _self = this.playerArray[param.userId];
 	if (!!_self) {
 		this.activeNum -= 1;
 		_self.status = Conde.Card.ABANDON;
-		var _ret = this.pushHandStatusMsg2All(data.userId, 1);
+		var _ret = this.pushHandStatusMsg2All(param.userId, 1);
 		return _ret;
 	} else {
 		return false;
@@ -188,14 +188,14 @@ Team.prototype.onAbandonHand = function(data){
 *
 * @param: 
 */
-Team.prototype.doAddPlayer = function(teamObj, data){
+Team.prototype.doAddPlayer = function(teamObj, param){
 	var _playerSeat = getPlayerSeat(this.playerSeat);
 	var _hand = Logic.createHandCard(teamObj.poker);
 	if (!!_hand && typeof(_hand) === 'object'){
 		/*{username, vip, diamond, gold, serviceId}*/
-		this.playerSeat[_playerSeat] = data.userId;
-		teamObj.playerArray[data.userId] = {serviceId: data.serviceId, hand: _hand.cards, pattern: _hand.pattern, status: Code.Card.BACK, 
-			username: data.username, vip: data.vip, diamond: data.diamond, gold: data.gold, seat: _playerSeat};
+		this.playerSeat[_playerSeat] = param.userId;
+		teamObj.playerArray[param.userId] = {serviceId: param.serviceId, hand: _hand.cards, pattern: _hand.pattern, status: Code.Card.BACK, 
+			username: param.username, vip: param.vip, diamond: param.diamond, gold: param.gold, seat: _playerSeat};
 		return true;
 	} else {
 		return false;
@@ -210,38 +210,26 @@ Team.prototype.doUpdateTeamInfo = function(userId){
 		if (i != 0) {
 			user = users[i];
 			userObjDict[i] = {userId: i, status: user.status, username: user.username, vip: user.vip, diamond: user.diamond, gold: user.gold, seat: user.seat};
-			console.log('=======================>>>5555', i, userObjDict[i]);
 		}
 	}
 
 	if (Object.keys(userObjDict).length > 0) {
-		console.log('=======================>>>6666', userObjDict);
 		this.teamChannel.pushMessage('onAddPlayerMsg', userObjDict);
 		//setTimeout(function(){
-		this.startGame();
+		//this.startGame();
 		//}, 1000);
 	}
 }
 
 /**
 * 
-* @param:
-*/
-Team.prototype.compareHand = function(data) {
-
-}
-
-
-
-/**
-* 
 * @param: 
 */
-Team.prototype.getTeammatesBasic = function(data){
-	if (!data || typeof(data) != 'object') {
+Team.prototype.getTeammatesBasic = function(param){
+	if (!param || typeof(param) != 'object') {
 		return null;
 	} else {
-		var _player = this.playerArray[data.userId];
+		var _player = this.playerArray[param.userId];
 		if (!!_player) {
 			return _player;
 		} else {
@@ -281,20 +269,25 @@ Team.prototype.getTeammatesBasic = function(data){
 	}
 }*/
 
-Team.prototype.startGame = function(){
+Team.prototype.startGame = function(param, callback){
 	if (this.startTime === 0) {
 		if (this.playerNum >= 1 && this.isOnGame === false) {
-			console.log('=================>>>11111', this.startTime, this.playerNum, this.isOnGame)
 			this.isOnGame = true;
 			this.activeNum = this.playerNum;
-			this.teamChannel.pushMessage('onStartGameMsg', {name: 'zhao'});
+			this.teamChannel.pushMessage('onStartGameMsg', {name: 'zhao'}, callback);
 		}
 	} else {
-		
+		var _timeDiff = Date.now()-this.startTime;
+		if (_timeDiff >= 4000 && this.playerNum >= 2 && this.isOnGame === false) {
+			console.log('user request start game ======>>>', param.userId);
+			this.isOnGame = true;
+			this.activeNum = this.playerNum;
+			this.teamChannel.pushMessage('onStartGameMsg', {name: 'zhao'}, callback);
+		}
 	}	
 }
 
-Team.prototype.restartGame = function(){
+Team.prototype.restartGame = function(param, callback){
 	this.isOnGame = false;
 	this.poker = poker.getXXPoker();
 	for (var i in this.playerArray) {
@@ -303,17 +296,15 @@ Team.prototype.restartGame = function(){
 		this.playerArray[i]['pattern'] = _hand.pattern;
 	}
 
-	//setTimeout(function(){
-		this.startGame();
-	//}, 1000);
+	this.startGame(param, callback);
 }
 
-Team.prototype.getTeammateHand = function(data){
-	if (!data || typeof(data) !== 'object'){
+Team.prototype.getTeammateHand = function(param){
+	if (!param || typeof(param) !== 'object'){
 		return Code.Team.DATA_ERR;
 	}
 
-	return getTeammateHand(data.userId, this.playerArray);
+	return getTeammateHand(param.userId, this.playerArray);
 }
 
 Team.prototype.getPlayerNum = function(){
@@ -358,14 +349,14 @@ Team.prototype.createChannel = function(){
 * @param: {userId, serviceId}
 *
 */
-Team.prototype.addPlayer2Channel = function(data){
+Team.prototype.addPlayer2Channel = function(param){
 	if (!this.teamChannel){
 		return false;
 	}
 
-	if (data) {
-		var res = this.teamChannel.add(data.userId, data.serviceId);
-		this.playerUids.push({uid:data.userId, sid:data.serviceId});
+	if (param) {
+		var res = this.teamChannel.add(param.userId, param.serviceId);
+		this.playerUids.push({uid:param.userId, sid:param.serviceId});
 		return true;
 	}
 
@@ -377,13 +368,13 @@ Team.prototype.addPlayer2Channel = function(data){
 * @param: {userId, serviceId}
 * 
 */
-Team.prototype.removePlayerFromChannel = function(data){
+Team.prototype.removePlayerFromChannel = function(param){
 	if (!this.teamChannel){
 		return false;
 	}
 
-	if (data) {
-		this.teamChannel.leave(data.userId, data.serviceId);
+	if (param) {
+		this.teamChannel.leave(param.userId, param.serviceId);
 		return true;
 	}
 	return false;
@@ -410,17 +401,17 @@ Team.prototype.pushLeaveMsg2All = function(userId, serviceId){
 	})
 }
 
-Team.prototype.pushChatMsg2All = function(data){
+Team.prototype.pushChatMsg2All = function(param){
 	if (!this.teamChannel){
 		return false;
 	}
 
-	var userId = data.userId;
+	var userId = param.userId;
 	if (!this.isPlayerInTeam(userId)) {
 		return false;
 	}
 
-	this.teamChannel.pushMessage('onChat', data, null);
+	this.teamChannel.pushMessage('onChat', param, null);
 }
 
 /**
@@ -433,7 +424,7 @@ Team.prototype.pushTeamMsg2All = function(type, userId, amount){
 	}
 
 	var _param = {type: type, userId: userId, amount: amount};
-	 if (data.type === Const.TeamMsg.COMPARE_HAND) {
+	 if (param.type === Const.TeamMsg.COMPARE_HAND) {
 
 	 } else {
 	 	_param = {type: type, userId:userId}
@@ -478,13 +469,13 @@ Team.prototype.pushBetHandMsg2All = function(_userId, _type, _amount){
 * 通知比较卡牌信息
 * @param: {type, userId, amount}
 */
-Team.prototype.pushCompareHandMsg2All = function(_initiative, _passivity, _status){
+Team.prototype.pushCompareHandMsg2All = function(_initiative, _passivity, _status, callback){
 	if (!this.teamChannel) {
 		return false;
 	}
 
 	var _msg = {initiative: _initiative, passivity: _passivity, status: _status};
-	this.teamChannel.pushMessage('onCompareHandMsg', _msg);
+	this.teamChannel.pushMessage('onCompareHandMsg', _msg, callback);
 	return true;
 }
 

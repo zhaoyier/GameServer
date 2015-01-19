@@ -212,6 +212,43 @@ handler.abandon = function(msg, session, next){
 }
 
 /**
-* 
+* 请求开始游戏
 * @param: 
 */
+hander.startGame = function(msg, session, next) {
+    var _userId = session.get('playerId');
+    var _gameService = this.gameService;
+
+    if (!!_userId && !!_gameService) {
+        _gameService.startGame(_userId, function(error, res){
+            if (!error) {
+                return next(null, {code: 200});
+            } else {
+                return next(null, {code: 201});
+            }
+        })
+    } else {
+        return next(null, {code: 201});
+    }
+}
+
+/**
+* 请求开始游戏
+* @param: 
+*/
+hander.restartGame = function(msg, session, next) {
+    var _userId = session.get('playerId');
+    var _gameService = this.gameService;
+
+    if (!!_userId && !!_gameService) {
+        _gameService.restartGame(_userId, function(error, res){
+            if (!error) {
+                return next(null, {code: 200});
+            } else {
+                return next(null, {code: 201});
+            }
+        })
+    } else {
+        return next(null, {code: 201});
+    }
+}
