@@ -193,29 +193,33 @@ Team.prototype.doAddPlayer = function(teamObj, data){
 	var _hand = Logic.createHandCard(teamObj.poker);
 	if (!!_hand && typeof(_hand) === 'object'){
 		/*{username, vip, diamond, gold, serviceId}*/
-		this.playerSeat[data.userId] = _playerSeat;
+		this.playerSeat[_playerSeat] = data.userId;
 		teamObj.playerArray[data.userId] = {serviceId: data.serviceId, hand: _hand.cards, pattern: _hand.pattern, status: Code.Card.BACK, 
-			username: data.username, vip: data.vip, diamond: data.diamond, gold: data.gold};
+			username: data.username, vip: data.vip, diamond: data.diamond, gold: data.gold, seat: _playerSeat};
 		return true;
 	} else {
 		return false;
 	}
 }
 
+
 Team.prototype.doUpdateTeamInfo = function(userId){
 	var userObjDict = {};
 	var users = this.playerArray;
 	for (var i in users){
 		if (i != 0) {
-			userObjDict[i] = {status: users[i].status, username: users[i].username, vip: users[i].vip, diamond: users[i].diamond, gold: users[i].gold, seat: users[i].seat};
+			user = users[i];
+			userObjDict[i] = {userId: i, status: user.status, username: user.username, vip: user.vip, diamond: user.diamond, gold: user.gold, seat: user.seat};
+			console.log('=======================>>>5555', i, userObjDict[i]);
 		}
 	}
 
 	if (Object.keys(userObjDict).length > 0) {
-		this.teamChannel.pushMessage('onUpdateTeam', userObjDict);
-		setTimeout(function(){
-			this.startGame();
-		}, 1000);
+		console.log('=======================>>>6666', userObjDict);
+		this.teamChannel.pushMessage('onAddPlayerMsg', userObjDict);
+		//setTimeout(function(){
+		this.startGame();
+		//}, 1000);
 	}
 }
 
@@ -251,29 +255,43 @@ Team.prototype.getTeammatesBasic = function(data){
 * @param: 
 * 
 */
-Team.prototype.startGame = function(){
+/*function startGame(_gameService){
+	console.log('========>>>1111', _gameService.startTime, _gameService.playerNum, _gameService.isOnGame);
 	var now = Date.now();
-	if (this.startTime === 0) {
+	if (_gameService.startTime === 0) {
 		//第一次开始游戏
-		if (this.playerNum >= 2 && this.isOnGame === false) {
+		if (_gameService.playerNum >= 2 && _gameService.isOnGame === false) {
 			setTimeout(function(){
-				this.isOnGame = true;
-				this.activeNum = this.playerNum;
-				this.teamChannel.pushMessage('onStartGame', {});
+				_gameService.isOnGame = true;
+				_gameServic.activeNum = _gameService.playerNum;
+				_gameServic.teamChannel.pushMessage('onStartGameMsg', {});
 			}, 1000);
 		}
 	} else {
 		var _sched = later.parse.recur().every(5).second();
 		var _timeObj = later.setInterval(function(){
-			var _timeDiff = Date.now()-this.startTime;
-			if (_timeDiff >= 4000 && this.playerNum >= 2 && this.isOnGame = false) {
+			var _timeDiff = Date.now()-_gameService.startTime;
+			if (_timeDiff >= 4000 && _gameService.playerNum >= 2 && _gameService.isOnGame === false) {
 				_timeObj.clear();
-				this.isOnGame = true;
-				this.activeNum = this.playerNum;
-				this.teamChannel.pushMessage('onStartGame', {});
+				_gameService.isOnGame = true;
+				_gameService.activeNum = _gameService.playerNum;
+				_gameService.teamChannel.pushMessage('onStartGameMsg', {});
 			}
 		}, _sched);
 	}
+}*/
+
+Team.prototype.startGame = function(){
+	if (this.startTime === 0) {
+		if (this.playerNum >= 1 && this.isOnGame === false) {
+			console.log('=================>>>11111', this.startTime, this.playerNum, this.isOnGame)
+			this.isOnGame = true;
+			this.activeNum = this.playerNum;
+			this.teamChannel.pushMessage('onStartGameMsg', {name: 'zhao'});
+		}
+	} else {
+		
+	}	
 }
 
 Team.prototype.restartGame = function(){
@@ -285,9 +303,9 @@ Team.prototype.restartGame = function(){
 		this.playerArray[i]['pattern'] = _hand.pattern;
 	}
 
-	setTimeout(function(){
+	//setTimeout(function(){
 		this.startGame();
-	}, 1000);
+	//}, 1000);
 }
 
 Team.prototype.getTeammateHand = function(data){
@@ -347,7 +365,7 @@ Team.prototype.addPlayer2Channel = function(data){
 
 	if (data) {
 		var res = this.teamChannel.add(data.userId, data.serviceId);
-		//this.playerUids.push({uid:data.userId, sid:data.serviceId});
+		this.playerUids.push({uid:data.userId, sid:data.serviceId});
 		return true;
 	}
 
