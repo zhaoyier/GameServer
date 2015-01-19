@@ -87,7 +87,6 @@ handler.joinTeam = function(userId, roomType, callback){
 		if (_status === 200) {
 			return callback(null, {teamId: _teamObj.teamId});
 		} else {
-			console.log('join team=================>>', _status);
 			return callback(201);
 		}		
 	} else {
