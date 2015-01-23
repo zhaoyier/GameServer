@@ -86,6 +86,7 @@ handler.joinTeam = function(userId, roomType, callback){
 
 		var _status = _teamObj.onAddPlayer(_data);
 		if (_status === 200) {
+			this.teamMap[userId] = _teamObj.teamId;
 			return callback(null, {teamId: _teamObj.teamId});
 		} else {
 			return callback(201);
@@ -131,9 +132,11 @@ handler.startGame = function(userId, callback) {
 	var _teamObj = queryUserTeamObj(this, userId);
 	if (!!_teamObj) {
 		_teamObj.startGame({uesrId: userId}, function(error, res){
+			console.log('=================>>>555', error, '///', res);
 			callback(error, res);
 		})
 	} else {
+		console.log('=================>>>666', userId);
 		callback(201);
 	}
 }
@@ -304,9 +307,12 @@ var addTeamRecord = function(service, userId, data){
 }
 
 var queryUserTeamObj = function(service, userId) {
-	var _teamId = this.teamMap[userId];
+	console.log('=============>>>7777:\t', service.teamMap);
+	//var _teamId = this.teamMap[userId];
+	var _teamId = service.teamMap[userId];
 	if (!!_teamId) {
-		var _teamObj = this.teamObjMap[_teamId];
+		//var _teamObj = this.teamObjMap[_teamId];
+		var _teamObj = service.teamObjMap[_teamId];
 		if (!!_teamObj) {
 			return _teamObj;
 		} else {

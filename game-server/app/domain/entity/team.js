@@ -270,6 +270,7 @@ Team.prototype.getTeammatesBasic = function(param){
 }*/
 
 Team.prototype.startGame = function(param, callback){
+	console.log('============================>>>startTime:\t', this.startTime, '//', this.isOnGame);
 	if (this.startTime === 0) {
 		if (this.playerNum >= 1 && this.isOnGame === false) {
 			this.isOnGame = true;
@@ -279,7 +280,7 @@ Team.prototype.startGame = function(param, callback){
 	} else {
 		var _timeDiff = Date.now()-this.startTime;
 		if (_timeDiff >= 4000 && this.playerNum >= 2 && this.isOnGame === false) {
-			console.log('user request start game ======>>>', param.userId);
+			//console.log('user request start game ======>>>', param.userId);
 			this.isOnGame = true;
 			this.activeNum = this.playerNum;
 			this.teamChannel.pushMessage('onStartGameMsg', {name: 'zhao'}, callback);

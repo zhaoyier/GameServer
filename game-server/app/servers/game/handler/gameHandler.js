@@ -215,7 +215,7 @@ handler.abandon = function(msg, session, next){
 * 请求开始游戏
 * @param: 
 */
-hander.startGame = function(msg, session, next) {
+handler.startGame = function(msg, session, next) {
     var _userId = session.get('playerId');
     var _gameService = this.gameService;
 
@@ -236,7 +236,7 @@ hander.startGame = function(msg, session, next) {
 * 请求开始游戏
 * @param: 
 */
-hander.restartGame = function(msg, session, next) {
+handler.restartGame = function(msg, session, next) {
     var _userId = session.get('playerId');
     var _gameService = this.gameService;
 
