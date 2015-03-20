@@ -8,83 +8,91 @@ var Code = require('../consts/code').Account;
 
 var userAccount = module.exports;
 
-userAccount.queryAccount = function(userId, cb){
-	var sql = 'select * from Account where uid = ?';
+userAccount.queryAccount = function(userId, callback){
+	var _dbclient = pomelo.app.get('dbclient');
+	_dbclient.game_account.findOnd({_id: userId}, function(error, doc) {
+		if (error) {
+			utils.invokeCallback(callback, null, {code: 201});
+		} else{
+			utils.invokeCallback(callback, null, {code: 200, vip: doc.vip, diamond: doc.diamond, gold: doc.gold});
+		}
+	})	
+}
 
-	pomelo.app.get('dbclient').query(sql, [parseInt(userId)], function(error, res){
-		if (error !== null) {
-			logger.error('');
-			utils.invokeCallback(cb, error, null);
-		} else if (!!res && res.length === 1){
-			utils.invokeCallback(cb, null, {code: 200, vip: res[0].vip, diamond: res[0].diamond, gold: res[0].gold});
+
+userAccount.rechargeAccount = function(userId, recharge, channel, tranId, callback){
+	userId = !!userId?userId:10000001;
+	
+	var _dbclient = pomelo.app.get('dbclient');
+	var _account = {}, _user = {};
+	async.series({
+		recharge: function(cb){
+			_dbclient.game_recharge.insert({uid: userId, recharge: parseInt(recharge), channel: channel, tranId: tranId}, {w:1}, function(error, doc){
+				cb(error, 'ok');
+			})
+		},
+		query: function(cb) {
+			_dbclient.game_account.findOne({_id: userId}, function(error, doc) {
+				if (!error) _account = doc;
+				cb(error, 'ok');
+			})
+		},
+		update: function(cb){
+			if (!_account) return cb(201);
+			
+			_user.recharge = parseInt(_account.recharge)+parseInt(recharge);
+			_user.vip = getUserVip(_user.recharge);
+			_user.diamond = parseInt(_account.diamond)+getUserRechargeDiamond(recharge);
+
+			_dbclient.game_account.update({_id: userId}, {$set: {recharge: _user.recharge, vip: _user.vip, diamond: _user.diamond}}, function(error, doc) {
+				cb(error, 'ok');
+			})
+		}
+	}, function(error, doc) {
+		if (error !== undefined || error) {
+			utils.invokeCallback(callback, null, {code: 201});
 		} else {
-			utils.invokeCallback(cb, null, {code: 201});
+			utils.invokeCallback(callback, null, {code: 200, diamond: _user.diamond, vip: _user.vip, gold: _account.gold});
 		}
 	})
 }
 
+userAccount.exchangeGold = function(userId, diamond, callback) {
+	userId = !!userId?userId:10000001;
+	
+	var _dbclient = pomelo.app.get('dbclient');
+	var _account = {}, _diamond = 0, _gold = 0, _exchange = 0;
 
-userAccount.rechargeAccount = function(userId, money, from, tranId, cb){
-	var _sql = 'select * from Account where uid = ?';
-
-	pomelo.app.get('dbclient').query(_sql, [userId], function(error, res){
-		if (error !== null) {
-			logger.error('');
-			utils.invokeCallback(cb, error, null);
-
-		} else if (!!res && res.length === 1){
-			var _recharge = res[0].recharge+money;
-			var _vip = getUserVip(_recharge);
-			var _diamond = res[0].diamond+getUserRechargeDiamond(money, 0);
-			_sql = 'update Account set vip = ?, diamond = ?, recharge = ? where uid = ?';
-			pomelo.app.get('dbclient').query(_sql, [_vip, _diamond, _recharge, userId], function(error, res){
-				if (error !== null) {
-					utils.invokeCallback(cb, error, null);
+	async.series({
+		query: function(cb){
+			_dbclient.game_account.findOne({_id: userId}, function(error, doc) {
+				if (error) {
+					cb(error);
+				} else if (doc.diamond < diamond) {
+					cb(201);
 				} else {
-					_sql = 'insert into Recharge(uid, recharge, from, tranId) values(?, ?, ?, ?)';
-					pomelo.app.get('dbclient').query(_sql, [userId, money, from, tranId], function(error, res){
-						utils.invokeCallback(cb, null, {code: 200, diamond: _diamond});
-					})
+					_account = doc;
+					cb(null, 'ok');
 				}
 			})
+		},
+		update: function(cb){
+			_diamond = parseInt(_account.diamond) - parseInt(diamond);
+			_exchange = parseInt(diamond)*1000;
+			_gold = parseInt(_account.gold)+_exchange;
 
-		} else {
-			var _recharge = res[0].recharge+money;
-			var _vip = getUserVip(_recharge);
-			var _diamond = res[0].diamond+getUserRechargeDiamond(money, 0);
-			_sql = 'insert into Account(uid, vip, diamond, recharge) values(?, ?, ?, ?)';
-			pomelo.app.get('dbclient').query(_sql, [userId, _vip, _diamond, _recharge], function(error, res){
-				if (error !== null) {
-					utils.invokeCallback(cb, error, null);
-				} else {
-					_sql = 'insert into Recharge(uid, recharge, from, tranId) values(?, ?, ?, ?)';
-					pomelo.app.get('dbclient').query(_sql, [userId, money, from, tranId], function(error, res){
-						utils.invokeCallback(cb, null, {code: 200, diamond: _diamond});
-					})
-				}
+			_dbclient.game_account.update({_id: userId}, {$set: {diamond: _diamond}, $inc: {gold: _exchange}}, function(error, doc) {
+				cb(error, doc);
 			})
+		},
+		record: function(cb){
+			_dbclient.game_exchange.insert({uid: userId, diamond: _diamond, gold: _gold, ct: Date.now()}, {w:1}, cb)
 		}
-	})
-}
-
-userAccount.exchangeGold = function(userId, diamond, cb) {
-	var _sql = 'select * from Account where uid = ?';
-	pomelo.app.get('dbclient').query(_sql, [userId], function(error, res){
-		if (error != null) {
-			logger.error('');
-			utils.invokeCallback(cb, error, null);
-		} else if (!!res && res.length === 1) {
-			if (res[0].diamond < diamond) {
-				return utils.invokeCallback(cb, 201, null);
-			} else {
-				var _gold = res[0].gold+diamond*10000;
-				_sql = 'update Account set diamond = diamond - ? , gold = gold + ? where uid = ?';
-				pomelo.app.get('dbclient').query(_sql, [diamond, _gold, userId], function(error, res){
-					return utils.invokeCallback(cb, null, {code: 200, gold: _gold});
-				})
-			}
+	}, function(error, doc) {
+		if (error) {
+			return utils.invokeCallback(callback, null, {code: 201});	
 		} else {
-			return utils.invokeCallback(cb, null, {code: 202});
+			return utils.invokeCallback(callback, null, {code: 200, diamond: _diamond, gold: _gold});
 		}
 	})
 }
@@ -93,34 +101,47 @@ userAccount.exchangeGold = function(userId, diamond, cb) {
 * 拍卖金币
 * @param: 
 */
-userAccount.auctionGold = function(userId, gold, diamond, cb){
-	var _sql = 'select * from Account where uid = ?';
-	var _param = [userId];
-
-	execSql(_sql, _param, function(error, query){
-		if (error === null) {
-			var _gold = query[0].gold;
-			if (query[0].gold < gold) {
-				return utils.invokeCallback(cb, 201, {code: 201});
-			}
-
-			_sql = 'update Account set gold = gold - ? where uid = ?';
-			execSql(_sql, [gold, userId], function(error, update){
-				if (error != null) {
-					return utils.invokeCallback(cb, 201, {code: 201});
+userAccount.auctionGold = function(userId, gold, diamond, callback){
+	userId = !!userId?userId:10000001;
+	var _dbclient = pomelo.app.get('dbclient');
+	var _account, _user, _gold;
+	
+	async.series({
+		check: function(cb) {
+			_dbclient.game_account.findOne({_id: userId}, function(error, doc) {
+				if (error) {
+					cb(error);
+				} else if (doc.gold < gold) {
+					cb(201);
+				} else {
+					_account = doc;
+					cb(null, 'ok');
 				}
-
-				_sql = 'insert into AuctionGold(saler, diamond, gold) values(?,?,?)';
-				execSql(_sql, [userId, diamond, gold], function(error, insert){
-					if (error != null) {
-						return utils.invokeCallback(cb, 201, {code: 201});
-					}
-
-					return utils.invokeCallback(cb, null, {code: 200, gold: (_gold-gold)});
-				})
+			})			
+		},
+		query: function(cb) {
+			_dbclient.game_user.findOne({_id: userId}, {name:1}, function(error, doc) {
+				if (!error) _user = doc;
+				cb(error, 'ok');
 			})
+		},
+		auction: function(cb) {
+			_dbclient.game_auction.save({uid: userId, name: _user.name, gold: gold, diamond: diamond}, {w:1}, function(error, doc) {
+				cb(error, 'ok');
+			})
+		},
+		update: function(cb) {
+			_gold = parseInt(_account.gold)-parseInt(gold);
+			_dbclient.game_account.update({_id: userId}, {$inc: {gold: _gold}}, function(error, doc) {
+				cb(error, 'ok');
+			})
+		}
+	}, function(error, doc) {
+		console.log('==========>>>', error, doc);
+		if (error) {
+			return utils.invokeCallback(callback, null, {code: 201});
 		} else {
-			return utils.invokeCallback(cb, null, {code:201});
+			return utils.invokeCallback(callback, null, {code: 200, gold: _gold});
 		}
 	})
 }
@@ -324,7 +345,7 @@ function getUserRechargeDiamond(amount, options){
 	if (!!options && options === 0) {
 		return parseInt(amount)*2;
 	} else {
-		return amount+100;
+		return parseInt(amount)+100;
 	}
 }
 

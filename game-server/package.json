@@ -42,6 +42,7 @@
     "node-zookeeper-client": "0.2.0",
     "webkit-devtools-agent" : "0.1.2",
     "underscore": "1.6.0",
-	"later":"1.1.6"
+	"later":"1.1.6",
+	"mongodb":"*"
   }
 }

@@ -1,3 +1,4 @@
 [2014-11-14 19:27:13.153] [INFO] crash-log - [32m[/home/zhaojianwei/pomelo/GameServer/game-server/node_modules/pomelo/lib/master/master.js] [39m[master],[master-server-1],[1415964433153],[disconnect]
 [2014-11-14 19:27:13.160] [INFO] crash-log - [32m[/home/zhaojianwei/pomelo/GameServer/game-server/node_modules/pomelo/lib/master/master.js] [39m[chat],[chat-server-1],[1415964433159],[disconnect]
 [2014-11-14 19:27:13.175] [INFO] crash-log - [32m[/home/zhaojianwei/pomelo/GameServer/game-server/node_modules/pomelo/lib/master/master.js] [39m[gate],[gate-server-1],[1415964433175],[disconnect]
+[2015-03-18 17:17:01.427] [INFO] crash-log - [32m[/home/zhaojianwei/pomelo/GameServer/game-server/node_modules/pomelo/lib/master/master.js] [39m[client],[pomelo_list_1426670221208],[1426670221427],[disconnect]

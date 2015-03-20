@@ -265,7 +265,11 @@ handler.abandonHand = function(userId, callback){
 
 handler.queryUserServerId = function(userId){
 	console.log('===================>>>3232', userId);
-	return getServerIdByUserId(userId.toString(), this.app);
+	if (!!userId) {
+		return getServerIdByUserId(userId.toString(), this.app);
+	} else {
+		return null;
+	}
 }
 
 var addUserRecord = function(service, userId, data){

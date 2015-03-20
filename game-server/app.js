@@ -1,4 +1,5 @@
 var pomelo = require('pomelo');
+var mongodb = require('mongodb');
 var sync = require('pomelo-sync-plugin');
 var dispatcher = require('./app/util/dispatcher');
 var blackList = require('./app/util/blackList');
@@ -38,6 +39,7 @@ app.configure('production|development', function(){
 	app.route('connector', routeUtil.connectorRoute);
 
 	app.loadConfig('mysql', app.getBase() + '/../shared/config/mysql.json');
+	app.loadConfig('dbconfig', app.getBase() + '/../shared/config/mongodb.json');
 	app.filter(pomelo.filters.timeout());
 	
 })
@@ -54,7 +56,7 @@ app.configure('production|development', 'connector', function(){
 		connector : pomelo.connectors.hybridconnector,
 		heartbeat : 30, 
 		useDict : true,
-		//useProtobuf : true,
+		useProtobuf : true,
 		blacklistFun: blackList.blackListFun,
 		handshake : function(msg, cb){
 			cb(null, {});
@@ -68,7 +70,7 @@ app.configure('production|development', 'gate', function(){
 		//useDict: true,
 
 		// enable useProto
-		//useProtobuf: true
+		useProtobuf: true
 	});
 });
 
@@ -83,9 +85,13 @@ app.configure('production|development', 'game', function() {
 
 // Configure database
 app.configure('production|development', 'auth|connector|master|game', function() {
-	var dbclient = require('./app/dao/mysql/mysql').init(app);
-	app.set('dbclient', dbclient);
-	app.use(sync, {sync: {path:__dirname + '/app/dao/mapping', dbclient: dbclient}});
+	//var dbclient = require('./app/dao/mysql/mysql').init(app);
+	var dbclient = require('./app/dao/mongodb/mongodb').init(app, function(error, doc) {
+		console.log('========>>>333', error);
+		if (error === null) app.set('dbclient', doc);
+	});
+	//app.set('dbclient', dbclient);
+	//app.use(sync, {sync: {path:__dirname + '/app/dao/mapping', dbclient: dbclient}});
 })
 // start app
 app.start();

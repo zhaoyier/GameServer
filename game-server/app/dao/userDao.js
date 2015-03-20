@@ -8,62 +8,52 @@ var Code = require('../consts/code').Account;
 
 var userDao = module.exports;
 
+userDao.createUser = function(username, password, callback){
+	var _dbclient = pomelo.app.get('dbclient');		
 
-userDao.createUser = function(username, password, cb){
-	var sql = 'select * from Users where username = ?';
-	pomelo.app.get('dbclient').query(sql, [username], function(error, res){
-		if (error !== null) {
-			logger.error('');
-			utils.invokeCallback(cb, error, null);
-		} else {
-			sql = 'insert into Users(username, password, create_time) values(?,?,?)';
-			pomelo.app.get('dbclient').query(sql, [username, password], function(error, res){
-				if (error !== null){
-					logger.error('');
-					utils.invokeCallback(cb, error, null);
-				} else {
-					utils.invokeCallback(cb, null, {code: 200, userId: res.insertId});
-				}
+	var _userId = 0;
+	async.series({
+		account: function(cb) {
+			_dbclient.game_mark.findAndModify({mark: 'account'}, [['_id', 'asc']], {$inc: {base: 1}}, {}, function(error, doc) {
+				if (!error) _userId = doc.base;
+				cb(null, 'ok');
+			})
+		},
+		createUser: function(cb) {
+			_dbclient.game_user.save({_id: _userId, name: username, pwd: password, ct: Date.now()}, {w:1}, function(error, doc) {
+				cb(error);
+			})
+		},
+		createAccount: function(cb) {
+			_dbclient.game_account.save({_id: _userId, vip:0, recharge: 0, diamond: 0, gold: 0, ct: Date.now()}, {w:1}, function(error, doc) {
+				cb(error);
 			})
 		}
-	})
+	}, function(error, doc) {
+		utils.invokeCallback(callback, null, {code: 200, userId: _userId})
+	})	
 }
 
 userDao.authUser = function(username, password, cb){
-	var sql = 'select * from Users where username = ? and password = ?';
-	var args = [username, password];
+	var _dbclient = pomelo.app.get('dbclient');		
 
-	pomelo.app.get('dbclient').query(sql, args, function(error, res){
-		if (error !== null) {
-			logger.error('');
+	_dbclient.game_user.findOne({name: username, pwd: password}, function(error, doc) {
+		if (error) {
 			utils.invokeCallback(cb, error, null);
 		} else {
-			if (!!res && res.length === 1){
-				utils.invokeCallback(cb, null, {code: 200, userId: res[0].uid});
-				return ;
-			} else {
-				utils.invokeCallback(cb, null, {code: 200, userId: 0});
-			} 
+			utils.invokeCallback(cb, error, {code: 200, userId: doc._id});
 		}
 	})
 }
 
 userDao.queryUser = function(userId, cb){
-	var sql = 'select * from Users where uid = ?';
-
-	pomelo.app.get('dbclient').query(sql, [userId], function(error, res){
-		if (error !== null) {
-			logger.error('');
+	var _dbclient = pomelo.app.get('dbclient');		
+	
+	_dbclient.game_user.findOne({_id: userId}, function(error, doc) {
+		if (error) {
 			utils.invokeCallback(cb, error, null);
 		} else {
-			if (!!res && res.length === 1){
-				//console.log('===================>>>>>', res[0]);
-				utils.invokeCallback(cb, null, {code: 200, uid: res[0].uid, username:res[0].username});
-				return ;
-			} else {
-				logger.error('');
-				utils.invokeCallback(cb, null, {code: 201});
-			}			
+			utils.invokeCallback(cb, error, {code: 200, userId: doc._id, username: doc.name});
 		}
 	})
 }
@@ -75,7 +65,7 @@ userDao.queryUser = function(userId, cb){
 *
 */
 userDao.acquireDiamond = function(uid, diamond, way, cb){
-
+	
 }
 
 userDao.acquireGold = function(uid, gold, way, cb){

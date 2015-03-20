@@ -31,31 +31,39 @@ handler.entry = function(msg, session, next) {
 	var username = msg.username, password = msg.password;
 	var self = this;
 	//authAccount
-	var uid, player;
-	async.waterfall([
-		function(cb){
-			userDao.authUser(username, password, cb);
-		}, function(res, cb){
-			player = res;
-			uid = res.userId
-			if (parseInt(uid) === 0) {
-				cb(Code.Entry.ERROR_USER_PWD, null);
-			} else {
-				self.app.get('sessionService').kick(uid, cb);
-			}
-		},function(cb){
-			session.bind(uid, cb);
-		},function(cb){
+	var _userId=0;
+	async.series({
+		one: function(cb) {
+			userDao.authUser(username, password, function(error, doc) {
+				if (!error) _userId = doc.userId;
+				cb(error);
+			})
+		},
+		two: function(cb) {
+			self.app.get('sessionService').kick(_userId, function(error, doc){
+				cb(error, doc);
+			})
+		},
+		three: function(cb) {
+			session.bind(_userId, cb);
+		},
+		four: function(cb){
 			session.set('playerName', username);
-			session.set('playerId', uid);
+			session.set('playerId', _userId);
 			session.on('closed', onUserLeave.bind(null, self.app));
 			session.pushAll(cb);
-		},function(cb){
-			self.app.rpc.chat.chatRemote.add(session, uid, username, channelUtil.getGlobalChannelName(), cb);
+		},
+		five: function(cb){
+			self.app.rpc.chat.chatRemote.add(session, _userId, username, channelUtil.getGlobalChannelName(), function(error, doc){
+				cb(error, doc);
+			})
 		}
-	], function(error, results){
-		console.log('-----------:\t', error, results, player);
-		next(null, {code:200, userId: player.userId});
+	}, function(error, doc) {
+		if (error) {
+			next(null, {code: 201});
+		} else {
+			next(null, {code: 200, userId: _userId});
+		}
 	})
 };
 
