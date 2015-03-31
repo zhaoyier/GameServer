@@ -3,8 +3,8 @@ var pomelo = require('pomelo');
 
 var logger = require('pomelo-logger').getLogger('dao',__filename);
 var utils = require('../util/utils');
-var consts = require('../consts/consts');
-var Code = require('../consts/code').Account;
+var consts = require('../config/consts');
+var Code = require('../config/code').Account;
 
 var logDao = module.exports;
 

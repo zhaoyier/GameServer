@@ -1,7 +1,7 @@
 var chatRemote = require('../remote/chatRemote');
 var channelUtil = require('../../../util/channelUtil');
-var Code = require('../../../consts/code');
-var Consts = require('../../../consts/consts').Chat;
+var Code = require('../../../config/code');
+var Consts = require('../../../config/consts').Chat;
 
 module.exports = function(app) {
 	return new ChannelHandler(app, app.get('chatService'));

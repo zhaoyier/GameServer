@@ -10,8 +10,8 @@ var poker = require('../config/poker');
 var Logic = require('../logic/xxLogic');
 var channelUtil = require('../../util/channelUtil');
 
-var Consts = require('../../consts/consts');
-var Code = require('../../consts/code');
+var Consts = require('../../config/consts');
+var Code = require('../../config/code');
 
 /*
 * @function: onTeamMsg
@@ -22,23 +22,24 @@ var MAX_MEMBER_NUM = 5
 
 module.exports = Team;
 
-function Team(teamId){
+function Team(teamId, teamType){
 	this.teamId = 0;
-	this.startTime = 0;
+	this.teamType = 0;
+	this.teamWinner = 0;
 	this.playerNum = 0;
-	this.activeNum = 0;
-	this.playerUids = [];
+	this.activeNum = [];
 	this.playerSeat = {};
 	this.playerArray = {};
 	this.teamStatus = 0;		//是否锁定
 	this.teamChannel = null;
 	this.poker = [];
-	this.isOnGame = false;
-
+	this.hasStartGame = false;
+	this.lastGameTime = Date.now();
+	
 	var _this = this;
 	var init = function() {
 		_this.teamId = teamId;
-		_this.poker = poker.getXXPoker();
+		_this.teamType = teamType;
 		_this.createChannel();
 	}
 
@@ -49,10 +50,11 @@ var handler = Team.prototype;
 
 
 /**
-* 
+* @function: 新加 
 * @param: 
 */
 Team.prototype.onAddPlayer = function(param){
+	var _self = this;
 	if (!param || !param.userId || !param.serviceId){
 		return Code.Team.DATA_ERR;
 	}
@@ -81,7 +83,9 @@ Team.prototype.onAddPlayer = function(param){
 		this.playerNum++;
 	}
 
-	this.doUpdateTeamInfo(param.userId);
+	if (!_self.doUpdateTeamInfo(param.userId)){
+		return Code.Team.DATA_ERR;
+	}
 
 	return Code.OK;
 }
@@ -92,44 +96,59 @@ Team.prototype.onAddPlayer = function(param){
 */
 Team.prototype.onRemovePlayer = function(param) {
 	if (!param || !param.userId || !param.serviceId) {
-		return 201;
+		return false;
 	}
 
 	var _player = this.playerArray[param.userId];
 	if (!!_player) {
-		if (this.playerNum >= 1) {
+		if (this.playerNum > 1) {
 			this.playerNum -= 1;
-			this.activeNum -= 1;
-		} else {
-			this.playerNum = 0;
-		}
+			removeInactivityPlayer(param.userId, this.activeNum);
+			delete this.playerArray[param.userId];
+		} 
 
-		delete this.playerArray[param.userId];
-		pushLeaveMsg2All(param.userId, param.serviceId);
-	} else {
-		return 201;
+		if (this.playerNum > 0) {
+			pushLeaveMsg2All(param.userId, param.serviceId);
+		}
+		return true;
 	}
+	return false;
 }
 
 /**
-* 
+* @function:  
 * @param: {userId}
 */
-Team.prototype.onCheckSelfHand = function(param) {
+Team.prototype.checkHand = function(param, callback) {
 	if (!param || !param.userId) {
-		return null;
+		return callback(201, 'ok');
 	}
 
 	var _player = this.playerArray[param.userId];
 	if (!!_player) {
 		_player['status'] = Code.Card.BACK;
 		this.pushHandStatusMsg2All(param.userId, 0);
-		return {hand: _player.hand, pattern: _player.pattern};
+		return callback(null, {hand: _player.hand, pattern: _player.pattern});
 	} else {
-		return null;
+		return callback(201, 'ok');
 	}
 }
 
+Team.prototype.queryTeammates = function(param, callback) {
+	var _self = this;
+
+	if (!param || !param.userId) {
+		return callback(201);
+	}
+
+	var _teammates = {};
+	for (var id in _self.playerArray) {
+		if (id !== param.userId) {
+			_teammates[id] = _self.playerArray[id];
+		}
+	}
+	callback(null, {teammate: _teammates});
+}
 /**
 * function: 处理押注
 * @param: {userId, amount, type}
@@ -156,16 +175,65 @@ Team.prototype.onBetHand = function(param) {
 * @param: 
 */
 Team.prototype.onCompareHand = function(param, callback){
-	var _self = this.playerArray[param.userId];
-	var _teammate = this.playerArray[param.teammate];
-	if (!!_self && !!_teammate) {
-		var _ret = Logic.getCompareSize({cards: _self.hand, pattern: _self.pattern}, {cards: _teammate.hand, pattern: _teammate.pattern}, true);
-		this.pushCompareHandMsg2All(param.userId, param.teammate, _ret, function(error, res){
-			callback(null, {status: _ret, number: this.activeNum});
-		});		
-	} else {
-		callback(203);
-	}		
+	var _self = this;
+	var _selfInfo = _self.playerArray[param.selfId];
+	var _teammateInfo = _self.playerArray[param.teammate];
+	
+	var _loser = 0, _winner, _compareRes = 0;
+	async.series({
+		checkUser: function(cb) {
+			if (!_selfInfo || !_teammateInfo) {
+				cb(201);
+			} else {
+				cb(null);
+			}
+		},
+		checkCompare: function(cb) {
+			_compareRes = Logic.getCompareSize({cards: _selfInfo.hand, pattern: _selfInfo.pattern}, {cards: _teammateInfo.hand, pattern: _teammateInfo.pattern}, true);
+			if (_compareRes === -1) {
+				cb(201);
+			} else if (_compareRes === 0) {
+				_loser = param.selfId; _winner = param.teammate; cb(null);
+			} else {
+				_loser = param.teammate;  _winner = param.selfId; cb(null);
+			}
+		},
+		updateTeam: function(cb) {
+			if (_loser === param.selfId) {
+				_selfInfo.card = Code.Card.ABANDON;
+				removeInactivityPlayer(param.selfId, this.activeNum);
+			} else {
+				_teammateInfo.card = Code.Card.ABANDON;
+				removeInactivityPlayer(param.teammate, this.activeNum);
+			}
+			cb(null);
+		},
+		noticeTeam: function(cb) {
+			if (!!_self.teamChannel) {
+				//发起人和被动接受人
+				var _data = {init: param.selfId, pass: param.teammate, res: _compareRes};
+				this.teamChannel.pushMessage('onCompareHandMsg', _data, cb);
+			} else {
+				cb(201);
+			}
+		},
+		noticeClear: function(cb) {
+			if (_self.activeNum.length === 1) {
+				var _data = getClearGame(_winner, _self.playerArray);
+				setTimeout(function(){
+					this.teamChannel.pushMessage('onClearHandMsg', _data, cb);
+				}, 3000);	
+			} else {
+				cb(null);
+			} 
+		}
+	}, function(error, doc) {
+		if (error) {
+			callback(201);
+		} else {
+			callback(null, {res: _compareRes, active: _self.activeNum.length});
+		}
+	})	
 }
 
 /**
@@ -175,7 +243,7 @@ Team.prototype.onCompareHand = function(param, callback){
 Team.prototype.onAbandonHand = function(param){
 	var _self = this.playerArray[param.userId];
 	if (!!_self) {
-		this.activeNum -= 1;
+		removeInactivityPlayer(param.userId, this.activeNum);
 		_self.status = Conde.Card.ABANDON;
 		var _ret = this.pushHandStatusMsg2All(param.userId, 1);
 		return _ret;
@@ -189,36 +257,42 @@ Team.prototype.onAbandonHand = function(param){
 * @param: 
 */
 Team.prototype.doAddPlayer = function(teamObj, param){
-	var _playerSeat = getPlayerSeat(this.playerSeat);
-	var _hand = Logic.createHandCard(teamObj.poker);
-	if (!!_hand && typeof(_hand) === 'object'){
-		/*{username, vip, diamond, gold, serviceId}*/
-		this.playerSeat[_playerSeat] = param.userId;
-		teamObj.playerArray[param.userId] = {serviceId: param.serviceId, hand: _hand.cards, pattern: _hand.pattern, status: Code.Card.BACK, 
-			username: param.username, vip: param.vip, diamond: param.diamond, gold: param.gold, seat: _playerSeat};
-		return true;
-	} else {
-		return false;
-	}
+	var _place = getPlayerSeat(this.playerSeat);
+
+	this.playerSeat[_place] = param.userId;
+	//var _user = teamObj.playerArray[param.userId];
+	var _user = {};
+	var _userId = param.userId;
+	_user['userId'] = _userId;
+	_user['serviceId'] = param.serviceId;
+	_user['username'] = param.username;
+	_user['vip'] = param.vip;
+	_user['diamond'] = param.diamond;
+	_user['gold'] = param.gold;
+	_user['place'] = _place;	
+	_user['avatar'] = !!param.avatar?param.avatar: '0';
+	_user['card'] = Code.Card.BACK;
+	_user['active'] = 0;
+	_user['consume'] = 0;
+	_user['base'] = getTeamBase(this.teamType);
+	teamObj.playerArray[_userId] = _user;
+	return true;
 }
 
 
 Team.prototype.doUpdateTeamInfo = function(userId){
-	var userObjDict = {};
-	var users = this.playerArray;
-	for (var i in users){
-		if (i != 0) {
-			user = users[i];
-			userObjDict[i] = {userId: i, status: user.status, username: user.username, vip: user.vip, diamond: user.diamond, gold: user.gold, seat: user.seat};
-		}
+	var _self = this;
+	var _userInfo = _self.playerArray[userId];
+	
+	if (!_userInfo) {
+		return false;
 	}
 
-	if (Object.keys(userObjDict).length > 0) {
-		this.teamChannel.pushMessage('onAddPlayerMsg', userObjDict);
-		//setTimeout(function(){
-		//this.startGame();
-		//}, 1000);
-	}
+	if (Object.keys(_self.playerArray).length > 1) {
+		_self.teamChannel.pushMessage('onAddPlayerMsg', _userInfo);
+	}	
+
+	return true;
 }
 
 /**
@@ -238,67 +312,82 @@ Team.prototype.getTeammatesBasic = function(param){
 	}
 }
 
+Team.prototype.checkTeamPlayer = function(param) {
+	if (!param || typeof(param) != 'object') {
+		return null;
+	} else {
+		var _player = this.playerArray[param.userId];
+		if (!!_player) {
+			return _player;
+		} else {
+			return null;
+		}
+	}
+}
+
 /**
-* function: 
-* @param: 
-* 
-*/
-/*function startGame(_gameService){
-	console.log('========>>>1111', _gameService.startTime, _gameService.playerNum, _gameService.isOnGame);
-	var now = Date.now();
-	if (_gameService.startTime === 0) {
-		//第一次开始游戏
-		if (_gameService.playerNum >= 2 && _gameService.isOnGame === false) {
-			setTimeout(function(){
-				_gameService.isOnGame = true;
-				_gameServic.activeNum = _gameService.playerNum;
-				_gameServic.teamChannel.pushMessage('onStartGameMsg', {});
-			}, 1000);
-		}
-	} else {
-		var _sched = later.parse.recur().every(5).second();
-		var _timeObj = later.setInterval(function(){
-			var _timeDiff = Date.now()-_gameService.startTime;
-			if (_timeDiff >= 4000 && _gameService.playerNum >= 2 && _gameService.isOnGame === false) {
-				_timeObj.clear();
-				_gameService.isOnGame = true;
-				_gameService.activeNum = _gameService.playerNum;
-				_gameService.teamChannel.pushMessage('onStartGameMsg', {});
-			}
-		}, _sched);
+ * @function: 准备开始
+ * @param: 
+ * **/
+Team.prototype.prepareGame = function(param, callback) {
+	var _userId = param.userId;
+	if (!_userId) {
+		return callback(201);
 	}
-}*/
 
+	this.playerArray[_userId].active = true;
+	return callback(null, 'ok');
+}
+
+/**
+ * function: 判断开始条件/人数/时间/状态 
+ * @param: 
+ * **/
 Team.prototype.startGame = function(param, callback){
-	console.log('============================>>>startTime:\t', this.startTime, '//', this.isOnGame);
-	if (this.startTime === 0) {
-		if (this.playerNum >= 1 && this.isOnGame === false) {
-			this.isOnGame = true;
-			this.activeNum = this.playerNum;
-			this.teamChannel.pushMessage('onStartGameMsg', {name: 'zhao'}, callback);
+	var _timeDiff = Date.now()-this.lastGameTime;
+
+	if (_timeDiff <= 5000) {
+		return callback(201);
+	} else if (this.hasStartGame === true) {
+		return callback(201);
+	}else if (this.playerNum >= 2 && this.hasStartGame === false) {
+		this.hasStartGame = true;
+		this.poker = pokey.getXXPoker();
+		for (var userId in this.playerArray) {
+			if (this.playerArray[userId].active == true) {
+				this.activeNum.push(userId);
+				var _hand = Logic.createHandCard(this.poker);
+				this.playerArray[userId]['hand'] = _hand.cards;
+				this.playerArray[userId]['pattern'] = _hand.pattern;
+			} else {
+				this.playerArray[userId]['hand'] = [];
+				this.playerArray[userId]['pattern'] = 0;
+			}
 		}
+		this.teamChannel.pushMessage('onStartGameMsg', {}, callback);	
 	} else {
-		var _timeDiff = Date.now()-this.startTime;
-		if (_timeDiff >= 4000 && this.playerNum >= 2 && this.isOnGame === false) {
-			//console.log('user request start game ======>>>', param.userId);
-			this.isOnGame = true;
-			this.activeNum = this.playerNum;
-			this.teamChannel.pushMessage('onStartGameMsg', {name: 'zhao'}, callback);
-		}
-	}	
-}
-
-Team.prototype.restartGame = function(param, callback){
-	this.isOnGame = false;
-	this.poker = poker.getXXPoker();
-	for (var i in this.playerArray) {
-		var _hand = Logic.createHandCard(this.poker);
-		this.playerArray[i]['hand'] = _hand.cards;
-		this.playerArray[i]['pattern'] = _hand.pattern;
+		return callback(201);
 	}
-
-	this.startGame(param, callback);
 }
+
+/**
+ * @function: 计算加
+ * @param: 
+ * */
+Team.prototype.getRaiseAmount = function(param, callback) {
+	var _userId = param.userId;
+	var _active = param.active;
+	var _teamType = this.teamType;
+	var _user = this.playerArray[_userId];	
+	
+	if (_teamType === 1) {
+		var _amount = _user.base+100;
+		callback(null, {roomType: _teamType, amount: _amount});
+	} else {
+		callback(201, 0);
+	}
+}
+
 
 Team.prototype.getTeammateHand = function(param){
 	if (!param || typeof(param) !== 'object'){
@@ -330,6 +419,28 @@ Team.prototype.isPlayerInTeam = function(userId){
 	}
 }
 
+/**
+ * @function: 判断活跃玩家数量是否等于二 
+ * @param:
+ * */
+Team.prototype.checkAllBetPlayer = function(param, callback){
+	var _allPlayers = this.playerArray;
+	var _counter = 0, _activeUser;;
+
+	for (var _id in _allPlayers) {
+		if (_allPlayers[_id].active === 1) {
+			if (_id != param.userId) _activeUser = _id;
+			_counter += 1;
+		}
+	}
+
+	if (_counter  === 2) {
+		callback(null, {userId: _activeUser});
+	} else {
+		callback(201);
+	}
+}
+
 Team.prototype.createChannel = function(){
 	if (this.teamChannel) {
 		return this.teamChannel;
@@ -337,11 +448,9 @@ Team.prototype.createChannel = function(){
 
 	var channelName = channelUtil.getTeamChannelName(this.teamId);
 	this.teamChannel = pomelo.app.get('channelService').getChannel(channelName, true);
-	//this.teamChannel = pomelo.app.get('channelService');
 	if (this.teamChannel){
 		return this.teamChannel;
 	}
-
 	return null;
 }
 
@@ -357,10 +466,9 @@ Team.prototype.addPlayer2Channel = function(param){
 
 	if (param) {
 		var res = this.teamChannel.add(param.userId, param.serviceId);
-		this.playerUids.push({uid:param.userId, sid:param.serviceId});
+		//this.playerUids.push({uid:param.userId, sid:param.serviceId});
 		return true;
 	}
-
 	return false;
 }
 
@@ -475,7 +583,7 @@ Team.prototype.pushCompareHandMsg2All = function(_initiative, _passivity, _statu
 		return false;
 	}
 
-	var _msg = {initiative: _initiative, passivity: _passivity, status: _status};
+	var _msg = {win: _initiative, lose: _passivity, status: _status};
 	this.teamChannel.pushMessage('onCompareHandMsg', _msg, callback);
 	return true;
 }
@@ -522,3 +630,18 @@ function getPlayerSeat(playerSeat){
 	}
 }
 
+function getTeamBase(teamType) {
+	return 100;
+}
+
+function getClearGame(winner, players) {
+	return {win: winner};	
+}
+
+function removeInactivityPlayer(userId, activeArray) {
+	for (var i=0; i<activeArray.length; ++i) {
+		if (activeArray[i] === userId) {
+			activeArray.splice(i, 1);	
+		}
+	}
+}	

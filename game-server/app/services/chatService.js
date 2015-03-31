@@ -1,7 +1,7 @@
 var Code = require('../../../shared/code');
 var utils = require('../util/utils');
 var dispatcher = require('../util/dispatcher');
-var Event = require('../consts/consts').Event;
+var Event = require('../config/consts').Event;
 
 var ChatService = function(app) {
   this.app = app;
@@ -21,25 +21,25 @@ module.exports = ChatService;
  * @return {Number} see code.js
  */
 ChatService.prototype.add = function(uid, playerName, channelName) {
-  var sid = getSidByUid(uid, this.app);
-  if(!sid) {
-    return Code.CHAT.FA_UNKNOWN_CONNECTOR;
-  }
+	var sid = getSidByUid(uid, this.app);
+	if(!sid) {
+		return Code.CHAT.FA_UNKNOWN_CONNECTOR;
+	}
+	
+	if(checkDuplicate(this, uid, channelName)) {
+		return Code.OK;
+	}
+	
+	utils.myPrint('channelName = ', channelName);
+	var channel = this.app.get('channelService').getChannel(channelName, true);
+	if(!channel) {
+		return Code.CHAT.FA_CHANNEL_CREATE;
+	}
 
-  if(checkDuplicate(this, uid, channelName)) {
-    return Code.OK;
-  }
+	channel.add(uid, sid);
+	addRecord(this, uid, playerName, sid, channelName);
 
-  utils.myPrint('channelName = ', channelName);
-  var channel = this.app.get('channelService').getChannel(channelName, true);
-  if(!channel) {
-    return Code.CHAT.FA_CHANNEL_CREATE;
-  }
-
-  channel.add(uid, sid);
-  addRecord(this, uid, playerName, sid, channelName);
-
-  return Code.OK;
+	return Code.OK;
 };
 
 /**
@@ -109,13 +109,13 @@ ChatService.prototype.pushByChannel = function(channelName, msg, cb) {
  * @param  {Function} cb         callback
  */
 ChatService.prototype.pushByPlayerName = function(playerName, msg, cb) {
-  var record = this.nameMap[playerName];
-  if(!record) {
-    cb(null, Code.CHAT.FA_USER_NOT_ONLINE);
-    return;
-  }
+	var record = this.nameMap[playerName];
+	if(!record) {
+		cb(null, Code.CHAT.FA_USER_NOT_ONLINE);
+		return;
+	}
 	console.log('====================pushByPlayerName>>>')
-  this.app.get('channelService').pushMessageByUids(Event.chat, msg, [{uid: record.uid, sid: record.sid}], cb);
+	this.app.get('channelService').pushMessageByUids(Event.chat, msg, [{uid: record.uid, sid: record.sid}], cb);
 };
 
 /**
@@ -129,14 +129,14 @@ var checkDuplicate = function(service, uid, channelName) {
  * Add records for the specified user
  */
 var addRecord = function(service, uid, name, sid, channelName) {
-  var record = {uid: uid, name: name, sid: sid};
-  service.uidMap[uid] = record;
-  service.nameMap[name] = record;
-  var item = service.channelMap[uid];
-  if(!item) {
-    item = service.channelMap[uid] = {};
-  }
-  item[channelName] = 1;
+	var record = {uid: uid, name: name, sid: sid};
+	service.uidMap[uid] = record;
+	service.nameMap[name] = record;
+	var item = service.channelMap[uid];
+	if(!item) {
+		item = service.channelMap[uid] = {};
+	}
+	item[channelName] = 1;
 };
 
 /**

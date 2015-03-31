@@ -1,6 +1,6 @@
 var async = require('async');
 
-var Code = require('../../../consts/code');
+var Code = require('../../../config/code');
 var userDao = require('../../../dao/userDao');
 var channelUtil = require('../../../util/channelUtil');
 var logger = require('pomelo-logger').getLogger('gameservice', __filename);
@@ -28,43 +28,40 @@ var handler = Handler.prototype;
  * @return {Void}
  */
 handler.entry = function(msg, session, next) {
-	var username = msg.username, password = msg.password;
+	var _username = msg.username, _password = msg.password;
 	var self = this;
 	//authAccount
 	var _userId=0;
-	async.series({
-		one: function(cb) {
-			userDao.authUser(username, password, function(error, doc) {
+
+	async.waterfall([
+		function(callback) {
+			userDao.authUser(_username, _password, function(error, doc) {
 				if (!error) _userId = doc.userId;
-				cb(error);
+				callback(error);
 			})
 		},
-		two: function(cb) {
-			self.app.get('sessionService').kick(_userId, function(error, doc){
-				cb(error, doc);
-			})
+		function(callback) {
+			self.app.get('sessionService').kick(_userId, callback);
 		},
-		three: function(cb) {
-			session.bind(_userId, cb);
+		function(callback) {
+			session.bind(_userId, callback);
 		},
-		four: function(cb){
-			session.set('playerName', username);
+		function(callback) {
+			session.set('playerName', _username);
 			session.set('playerId', _userId);
 			session.on('closed', onUserLeave.bind(null, self.app));
-			session.pushAll(cb);
+			session.pushAll(callback);
 		},
-		five: function(cb){
-			self.app.rpc.chat.chatRemote.add(session, _userId, username, channelUtil.getGlobalChannelName(), function(error, doc){
-				cb(error, doc);
-			})
+		function(callback) {
+			self.app.rpc.chat.chatRemote.add(session, _userId, _username, channelUtil.getGlobalChannelName(), callback);
 		}
-	}, function(error, doc) {
+	], function(error, doc) {
 		if (error) {
 			next(null, {code: 201});
 		} else {
 			next(null, {code: 200, userId: _userId});
 		}
-	})
+	});
 };
 
 /**
@@ -78,5 +75,10 @@ var onUserLeave = function(app, session) {
 	if(!session || !session.uid) {
 		return;
 	}
-	app.rpc.chat.chatRemote.kick(session, session.uid, app.get('serverId'), session.get('rid'), null);
+	//app.rpc.chat.chatRemote.kick(session, {playerId: session.get('playerId'), serverId: app.get('serverId'), instanceId: session.get('instanceId')}, function(error){
+	//	if(!!err){
+	//		console.log('***>>:\t user leave error!');
+	//	}
+	//});
+	app.rpc.chat.chatRemote.kick(session, session._userId, null);
 };

@@ -56,7 +56,7 @@ app.configure('production|development', 'connector', function(){
 		connector : pomelo.connectors.hybridconnector,
 		heartbeat : 30, 
 		useDict : true,
-		//useProtobuf : true,
+		useProtobuf : true,
 		blacklistFun: blackList.blackListFun,
 		handshake : function(msg, cb){
 			cb(null, {});
@@ -67,10 +67,10 @@ app.configure('production|development', 'connector', function(){
 app.configure('production|development', 'gate', function(){
 	app.set('connectorConfig',{
 		connector : pomelo.connectors.hybridconnector,
-		//useDict: true,
+		useDict: true,
 
 		// enable useProto
-		//useProtobuf: true
+		useProtobuf: true
 	});
 });
 

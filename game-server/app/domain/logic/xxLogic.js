@@ -1,4 +1,4 @@
-var message = require('../../consts/consts');
+var message = require('../../config/consts');
 
 var handler = module.exports;
 
@@ -488,7 +488,7 @@ handler.getCardColor = function(cardValue){
 **/
 handler.getCompareSize = function(ownCards, otherCards, initiative){
 	if (ownCards === undefined || otherCards === undefined){
-		return 0;
+		return -1;
 	}
 
 	if (ownCards.pattern > otherCards.pattern){

@@ -1,16 +1,17 @@
 var async = require('async');
 var pomelo = require('pomelo');
+var ObjectId = require('mongodb').ObjectID;
 
 var logger = require('pomelo-logger').getLogger('dao',__filename);
 var utils = require('../util/utils');
-var consts = require('../consts/consts');
-var Code = require('../consts/code').Account;
+var consts = require('../config/consts');
+var Code = require('../config/code').Account;
 
 var userAccount = module.exports;
 
 userAccount.queryAccount = function(userId, callback){
 	var _dbclient = pomelo.app.get('dbclient');
-	_dbclient.game_account.findOnd({_id: userId}, function(error, doc) {
+	_dbclient.game_account.findOne({_id: userId}, function(error, doc) {
 		if (error) {
 			utils.invokeCallback(callback, null, {code: 201});
 		} else{
@@ -57,6 +58,10 @@ userAccount.rechargeAccount = function(userId, recharge, channel, tranId, callba
 	})
 }
 
+/**
+ * @function: 交易金币
+ * @param: 
+ * */
 userAccount.exchangeGold = function(userId, diamond, callback) {
 	userId = !!userId?userId:10000001;
 	
@@ -126,7 +131,7 @@ userAccount.auctionGold = function(userId, gold, diamond, callback){
 			})
 		},
 		auction: function(cb) {
-			_dbclient.game_auction.save({uid: userId, name: _user.name, gold: gold, diamond: diamond}, {w:1}, function(error, doc) {
+			_dbclient.game_auction.save({uid: userId, name: _user.name, gold: gold, diamond: diamond, status:0, ct: Date.now()}, {w:1}, function(error, doc) {
 				cb(error, 'ok');
 			})
 		},
@@ -137,7 +142,6 @@ userAccount.auctionGold = function(userId, gold, diamond, callback){
 			})
 		}
 	}, function(error, doc) {
-		console.log('==========>>>', error, doc);
 		if (error) {
 			return utils.invokeCallback(callback, null, {code: 201});
 		} else {
@@ -150,134 +154,128 @@ userAccount.auctionGold = function(userId, gold, diamond, callback){
 * 购买金币
 * @param: 
 */
-userAccount.buyGold = function(userId, serial, cb){
-	var _sql = 'select * from Account where uid = ?';
-	execSql(_sql, [userId], function(error, self){
-		if (error === null) {
-			var _selfDiamond = self[0].diamond;
-			_sql = 'select * from AuctionGold where id = ?';
-			execSql(_sql, [serial], function(error, auction){
-				if (error != null) {
-					return utils.invokeCallback(cb, 201, {code: 201});
-				}
-
-				if (auction[0].diamond <= _selfDiamond){
-					return utils.invokeCallback(cb, 201, {code: 201});
+userAccount.purchaseGold = function(userId, serial, callback){
+	userId = !!userId?userId:10000002;
+	var _dbclient = pomelo.app.get('dbclient');
+	
+	var _auction, _self, _selfDiamond;
+	async.series({
+		query: function(cb) {
+			_dbclient.game_auction.findOne({_id: ObjectId(serial.toString())}, function(error, doc) {
+				if (!error && !!doc) _auction = doc;
+				cb(error, 'ok');
+			})
+		},
+		check: function(cb) {
+			_dbclient.game_account.findOne({_id: userId}, function(error, doc) {
+				if (!error && !!doc && doc.diamond >= _auction.diamond) {
+					_self = doc;
+					cb(error, 'ok');
+				} else {
+					cb(201, 'ok');
 				}
 			})
-		}
-	})
-
-	var _self, _other;
-	async.waterfall([
-		function(callback){
-			var _sql = 'select * from Account where uid = ? and status = 0';
-			execSql(_sql, [userId], cb);
-		}, function(self, callback){
-			_self = self;
-			var _sql = 'select * from AuctionGold where id = ?';
-			execSql(_sql, [serial], callback);
 		},
-		function(auction, callback){
-			if (_self.length === 1 && auction.length === 1){
-				if (_self[0].diamond >= auction[0].diamond) {
-					_self[0].diamond -= auction[0].diamond;
-					_self[0].gold += getAuctionGold(auction[0].gold);
-					_other = auction;
-					dealAuctionData({userId: auction[0].saler, diamond: auction[0].diamond}, {userId: userId, gold: auction[0].gold, diamond: auction[0].diamond}, serial, callback);
+		deduct: function(cb) {
+			_selfDiamond = parseInt(_self.diamond) - parseInt(_auction.diamond);
+			
+			_dbclient.game_account.update({_id: userId}, {$set: {diamond: _selfDiamond}, $inc: {gold: _auction.gold}}, function(error, doc) {
+				cb(error, 'ok');
+			})
+		},
+		auction: function(cb) {
+			var _diamond = parseInt(_auction.diamond) - getAuctionDiamondTax(_auction.diamond);
+			_dbclient.game_account.update({_id: _auction.uid}, {$inc: {diamond: _diamond}}, function(error, doc) {
+				cb(error, 'ok');
+			})
+		},
+		record: function(cb){
+			_dbclient.game_auction.update({_id: ObjectId(serial.toString())}, {$set: {auctor: _self._id, status: 1, at: Date.now()}}, function(error, doc) {
+				cb(error, 'ok');
+			})
+		}
+	}, function(error, doc) {
+		if (error) {
+			return utils.invokeCallback(callback, null, {code: 201});
+		} else {
+			var _gold = _self.gold + _auction.gold;
+			return utils.invokeCallback(callback, null, {code: 200, diamond: _selfDiamond, gold: _gold});
+		}
+	})
+}
+
+userAccount.consumeDiamond = function(userId, diamond, channel, callback){
+	userId = !!userId?userId:10000001;
+	var _dbclient = pomelo.app.get('dbclient');
+
+	var _account, _diamond;
+
+	async.series({
+		check: function(cb) {
+			_dbclient.game_account.findOne({_id: userId}, function(error, doc) {
+				if (!error && !!doc && doc.diamond >= diamond) {
+					_account = doc;
+					cb(error, 'ok');
 				} else {
-					callback(202);
+					cb(201, 'ok');
 				}
-			} else {
-				callback(203);
-			}
+			})
+		},
+		update: function(cb) {
+			_diamond = _account.diamond - diamond;
+			_dbclient.game_account.update({_id: userId}, {$set: {diamond: _diamond}}, function(error, doc) {
+				cb(null, 'ok');
+			})
+		},
+		log: function(cb) {
+			_dbclient.consume_diamond_log.save({uid: userId, c: 0, a: diamond, ch: channel, ct: Date.now()}, {w:1}, function(error, doc) {
+				cb(null, 'ok');
+			})
 		}
-	], function(error, res){
-		if (error === null) {
-			//自己的钻石和金币，别人的ID和钻石
-			var _data = {self: {diamond: _self[0].diamond, gold: _self[0].gold}, other: {userId: _other[0].userId, diamond: getAuctionDiamond(_other[0].diamond)}}; 
-			cb(null, _data);
+	}, function(error, doc) {
+		if (error) {
+			utils.invokeCallback(callback, null, {code: 201});
 		} else {
-			cb(201);
+			utils.invokeCallback(callback, null, {code: 200, diamond: _diamond});
 		}
 	})
 }
 
-function dealAuctionData(saler, buyer, serial, cb){
-	async.waterfall([
-		function(callback) {
-			var _diamond = getAuctionDiamond(saler.diamond);
-			var _sql = 'update Account set diamond = diamond+? where uid = ?';
-			execSql(_sql, [_diamond, saler.userId], callback);
-		}, function(res, callback){
-			var _diamond = buyer.diamond;
-			var _gold = getAuctionGold(buyer.gold);
-			var _userId = buyer.userId;
-			var _sql = 'update Account set diamond = diamond-?, gold = gold+? where uid = ?';
-			execSql(_sql, [_diamond, _gold, _userId], callback);
-		}, function(res, callback){
-			var _sql = 'update AuctionGold set status = 1 where id = ?';
-			execSql(_sql, [serial], callback);
+userAccount.consumeGold = function(userId, gold, channel, callback){
+	userId = !!userId?userId:10000001;
+	var _dbclient = pomelo.app.get('dbclient');
+
+	var _account, _gold;
+
+	async.series({
+		check: function(cb) {
+			_dbclient.game_account.findOne({_id: userId}, function(error, doc) {
+				if (!error && !!doc && doc.gold >= gold) {
+					_account = doc;
+					cb(error, 'ok');
+				} else {
+					cb(201, 'ok');
+				}
+			})
+		},
+		update: function(cb) {
+			_gold = _account.gold - gold;
+			_dbclient.game_account.update({_id: userId}, {$set: {gold: _gold}}, function(error, doc) {
+				cb(null, 'ok');
+			})
+		},
+		log: function(cb) {
+			_dbclient.consume_gold_log.save({uid: userId, c: 0, a: gold, ch: channel, ct: Date.now()}, {w:1}, function(error, doc) {
+				cb(null, 'ok');
+			})
 		}
-	], function(error, res){
-		if (error === null) {
-			callback(null, res);
+	}, function(error, doc) {
+		if (error) {
+			utils.invokeCallback(callback, null, {code: 201});
 		} else {
-			callback(201);
+			utils.invokeCallback(callback, null, {code: 200, gold: _gold});
 		}
-	})
-}
-
-userAccount.consumeAccountDiamond = function(userId, diamond, cb){
-	var sql = 'select * from Account where uid = ?';
-	
-	pomelo.app.get('dbclient').query(sql, [userId], function(error, res){
-		if (error !== null) {
-
-		} else if (!!res && res.length === 1){
-			if (res[0].diamond >= diamond) {
-				var prime = res[0].diamond;
-				var remain = res[0].diamond - diamond;
-				sql = 'update Account set diamond = diamond - ? where uid = ?';
-				pomelo.app.get('dbclient').query(sql, [diamond, userId], function(error, res){
-					if (error !== null) {
-
-					} else {
-						accountLog('diamond', {prime: prime, change: diamond, remain: remain});
-						utils.invokeCallback(cb, null, {code: 200, diamond: remain});	
-					}				
-				})
-			} else {
-				utils.invokeCallback(cb, null, {code: 201});
-			}
-		}
-	})
-}
-
-userAccount.consumeAccountGold = function(userId, gold, cb){
-	var sql = 'select * from Account where uid = ?';
-	
-	pomelo.app.get('dbclient').query(sql, [userId], function(error, res){
-		if (error !== null) {
-
-		} else if (!!res && res.length === 1){
-			if (res[0].gold >= gold) {
-				var prime = res[0].gold;
-				var remain = res[0].gold - gold;
-				sql = 'update Account set gold = gold - ? where uid = ?';
-				pomelo.app.get('dbclient').query(sql, [gold, userId], function(error, res){
-					if (error !== null) {
-						
-					} else {
-						accountLog('gold', {prime: prime, change: gold, remain: remain});
-						utils.invokeCallback(cb, null, {code: 200, gold: remain});	
-					}				
-				})
-			} else {
-				utils.invokeCallback(cb, null, {code: 201});
-			}
-		}
-	})
+	});
 }
 
 /**
@@ -374,6 +372,6 @@ function getAuctionDiamond(diamond){
 }
 
 function getAuctionDiamondTax(diamond){
-	return 100;
+	return parseInt(diamond*0.05);
 }
 

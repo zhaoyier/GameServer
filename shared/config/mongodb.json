@@ -1,0 +1,19 @@
+{
+	"development": {
+		"host"	: "10.96.36.181",
+		"port"	: "27017",
+		"database"	: "Pomelo",
+		"host2"	: "10.96.36.181",
+		"port2"	: "27017",
+		"database2"	: "game_log"
+	},
+
+	"production": {
+		"host"	: "10.96.36.181",
+		"port"	: "27017",
+		"database"	: "Pomelo",
+		"host2"	: "10.96.36.181",
+		"port2"	: "27017",
+		"database2"	: "game_log"
+	}
+}

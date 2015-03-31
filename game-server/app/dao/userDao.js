@@ -3,8 +3,8 @@ var pomelo = require('pomelo');
 
 var logger = require('pomelo-logger').getLogger('dao',__filename);
 var utils = require('../util/utils');
-var consts = require('../consts/consts');
-var Code = require('../consts/code').Account;
+var consts = require('../config/consts');
+var Code = require('../config/code').Account;
 
 var userDao = module.exports;
 
@@ -37,8 +37,11 @@ userDao.createUser = function(username, password, callback){
 userDao.authUser = function(username, password, cb){
 	var _dbclient = pomelo.app.get('dbclient');		
 
+	//console.log('==========>>>>222:\t', username, password);
 	_dbclient.game_user.findOne({name: username, pwd: password}, function(error, doc) {
-		if (error) {
+		//console.log('==========>>>>333:\t', error, doc);
+		
+		if (error || !doc) {
 			utils.invokeCallback(cb, error, null);
 		} else {
 			utils.invokeCallback(cb, error, {code: 200, userId: doc._id});
@@ -53,7 +56,7 @@ userDao.queryUser = function(userId, cb){
 		if (error) {
 			utils.invokeCallback(cb, error, null);
 		} else {
-			utils.invokeCallback(cb, error, {code: 200, userId: doc._id, username: doc.name});
+			utils.invokeCallback(cb, error, {userId: doc._id, username: doc.name, avatar: doc.avatar});
 		}
 	})
 }

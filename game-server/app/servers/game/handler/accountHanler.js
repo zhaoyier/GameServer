@@ -86,43 +86,33 @@ handler.purchase = function(msg, session, next) {
 }
 
 /**
-* 查看排行榜
-* @param: 
-**/
-handler.rank = function(msg, session, next){
+ * 花费钻石
+ * @param: 
+ * **/
+handler.diamond = function(msg, session, next) {
+	var _userId = session.get('playerId');
 	
-}
-
-
-/**
-* 活动数据查询
-* @param: 
-**/
-handler.activity = function(msg, session, next){
-
-}
-
-/**
-* 消息
-* @param: 
-**/
-handler.message = function(msg, session, next) {
-
+	userAccount.consumeDiamond(_userId, msg.amount, msg.channel, function(error, doc) {
+		if (error === null && doc.code === 200) {
+			return next(null, {code: 200, diamond: doc.diamond});
+		} else {
+			return next(null, {code: 201})		
+		}
+	})
 }
 
 /**
-* 奖励
-* @param: 
-**/
-handler.award = function(msg, session, next) {
-
-}
-
-/**
-* 商城
-* @param: 
-**/
-
-handler.shop = function(msg, session, next) {
-
+ * 花费金币
+ * @param: 
+ * **/
+handler.gold = function(msg, session, next) {
+	var _userId = session.get('playerId');
+	
+	userAccount.consumeGold(_userId, msg.amount, msg.channel, function(error, doc) {
+		if (error === null && doc.code === 200) {
+			return next(null, {code: 200, gold: doc.gold});
+		} else {
+			return next(null, {code: 201})		
+		}
+	})
 }
